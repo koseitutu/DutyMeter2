@@ -1,8 +1,20 @@
 /**
- * Base entity types for the app store.
- *
- * The skeleton phase will extend this file with app-specific entity
- * interfaces derived from the development plan's data model.
+ * Data model types for DutyMeter
  */
 
-export interface Preferences {}
+export interface Session {
+  id: string;
+  date: string; // ISO date string YYYY-MM-DD
+  time: string; // HH:MM format
+  durationMinutes: number;
+  location: string;
+  position: string;
+  orgasm: boolean;
+  orgasmCount: number;
+  notes: string;
+  createdAt: string; // ISO timestamp
+}
+
+export interface Preferences {
+  userName?: string;
+}
