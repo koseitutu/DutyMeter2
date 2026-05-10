@@ -1,8 +1,8 @@
 import { View, Text, Pressable } from 'react-native';
-import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Typography';
 import { Session } from '@/store/types';
 import { formatSessionDate } from '@/utils/date-helpers';
+import { useTheme } from '@/components/theme-provider';
 
 interface SessionCardProps {
   session: Session;
@@ -11,6 +11,7 @@ interface SessionCardProps {
 }
 
 export function SessionCard({ session, onPress, compact = false }: SessionCardProps) {
+  const { colors } = useTheme();
   const dateStr = formatSessionDate(session.date, session.time);
 
   return (
@@ -18,15 +19,15 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
       {({ pressed }) => (
         <View
           style={{
-            backgroundColor: Colors.white,
+            backgroundColor: colors.surface,
             borderRadius: 12,
             borderCurve: 'continuous',
             paddingVertical: compact ? 12 : 16,
             paddingHorizontal: 16,
             borderLeftWidth: 3,
-            borderLeftColor: Colors.accent,
+            borderLeftColor: colors.accent,
             opacity: pressed ? 0.9 : 1,
-            boxShadow: '0 2px 8px rgba(74, 25, 66, 0.05)',
+            boxShadow: `0 2px 8px ${colors.shadow}`,
           }}
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -35,7 +36,7 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
                 style={{
                   fontFamily: Fonts.semiBold,
                   fontSize: 14,
-                  color: Colors.text,
+                  color: colors.text,
                 }}
                 selectable
               >
@@ -45,7 +46,7 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
                 style={{
                   fontFamily: Fonts.regular,
                   fontSize: 13,
-                  color: Colors.textSecondary,
+                  color: colors.textSecondary,
                   marginTop: 2,
                 }}
               >
@@ -58,7 +59,7 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
                   style={{
                     fontFamily: Fonts.medium,
                     fontSize: 13,
-                    color: session.orgasm ? Colors.success : Colors.error,
+                    color: session.orgasm ? colors.success : colors.error,
                   }}
                 >
                   Orgasm: {session.orgasm ? '✓' : '✗'}

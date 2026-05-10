@@ -1,30 +1,31 @@
 import { Tabs, useRouter } from "expo-router";
-import { Colors } from "@/constants/Colors";
 import { Fonts } from "@/constants/Typography";
 import { Ionicons } from "@expo/vector-icons";
 import { View, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "@/components/theme-provider";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.tabBarActive,
-        tabBarInactiveTintColor: Colors.tabBarInactive,
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarLabelStyle: {
           fontFamily: Fonts.medium,
           fontSize: 11,
         },
         tabBarStyle: {
-          backgroundColor: Colors.white,
+          backgroundColor: colors.tabBarBg,
           borderTopWidth: 0,
           paddingBottom: insets.bottom,
           height: 60 + insets.bottom,
-          boxShadow: '0 -2px 12px rgba(74, 25, 66, 0.06)',
+          boxShadow: '0 -2px 12px rgba(0, 0, 0, 0.06)',
         },
       }}
     >
@@ -38,9 +39,18 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="history"
+        options={{
+          title: "History",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="time-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="log-placeholder"
         options={{
-          title: "Log New Session",
+          title: "",
           tabBarButton: () => (
             <Pressable
               onPress={() => router.push("/log")}
@@ -55,24 +65,15 @@ export default function TabLayout() {
                   width: 56,
                   height: 56,
                   borderRadius: 28,
-                  backgroundColor: Colors.accent,
+                  backgroundColor: colors.accent,
                   justifyContent: "center",
                   alignItems: "center",
                   boxShadow: '0 4px 16px rgba(201, 116, 138, 0.4)',
                 }}
               >
-                <Ionicons name="add" size={28} color={Colors.white} />
+                <Ionicons name="add" size={28} color="#FFFFFF" />
               </View>
             </Pressable>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
-          title: "History",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time-outline" size={size} color={color} />
           ),
         }}
       />
@@ -82,6 +83,15 @@ export default function TabLayout() {
           title: "Stats",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bar-chart" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" size={size} color={color} />
           ),
         }}
       />

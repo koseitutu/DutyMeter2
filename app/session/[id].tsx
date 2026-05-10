@@ -9,19 +9,19 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Colors } from "@/constants/Colors";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
 import { formatDateShort } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
-
-const POSITIONS = ["Missionary", "Cowgirl", "Doggy Style", "Spooning", "Other"];
+import { useTheme } from "@/components/theme-provider";
 
 export default function SessionDetailScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const sessions = useAppStore((s) => s.sessions);
+  const positions = useAppStore((s) => s.settings.customPositions);
   const updateSession = useAppStore((s) => s.updateSession);
   const deleteSession = useAppStore((s) => s.deleteSession);
 
@@ -41,24 +41,24 @@ export default function SessionDetailScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: Colors.background,
+          backgroundColor: colors.background,
           justifyContent: "center",
           alignItems: "center",
         }}
       >
-        <Ionicons name="alert-circle-outline" size={48} color={Colors.accent} />
+        <Ionicons name="alert-circle-outline" size={48} color={colors.accent} />
         <Text
           style={{
             fontFamily: Fonts.medium,
             fontSize: 16,
-            color: Colors.textSecondary,
+            color: colors.textSecondary,
             marginTop: 12,
           }}
         >
           Session not found
         </Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 20 }}>
-          <Text style={{ fontFamily: Fonts.semiBold, fontSize: 14, color: Colors.accent }}>
+          <Text style={{ fontFamily: Fonts.semiBold, fontSize: 14, color: colors.accent }}>
             Go Back
           </Text>
         </Pressable>
@@ -99,12 +99,42 @@ export default function SessionDetailScreen() {
     return `${displayHour}:${minutes.toString().padStart(2, "0")} ${period}`;
   };
 
+  const detailRow = {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderCurve: "continuous" as const,
+    padding: 16,
+    boxShadow: `0 2px 8px ${colors.shadow}`,
+  };
+
+  const iconContainer = {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.chipInactive,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    marginTop: 2,
+  };
+
+  const miniStepper = {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.chipInactive,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View
         style={{
-          backgroundColor: Colors.primary,
+          backgroundColor: colors.headerBg,
           paddingTop: insets.top + 16,
           paddingBottom: 24,
           paddingHorizontal: 20,
@@ -116,15 +146,9 @@ export default function SessionDetailScreen() {
         }}
       >
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.white} />
+          <Ionicons name="arrow-back" size={24} color={colors.headerText} />
         </Pressable>
-        <Text
-          style={{
-            fontFamily: Fonts.heading,
-            fontSize: 20,
-            color: Colors.white,
-          }}
-        >
+        <Text style={{ fontFamily: Fonts.heading, fontSize: 20, color: colors.headerText }}>
           Session Details
         </Text>
         <Pressable onPress={handleDelete} hitSlop={12}>
@@ -136,46 +160,40 @@ export default function SessionDetailScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}
       >
-        {/* Date & Time row */}
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconContainer}>
-            <Ionicons name="calendar" size={18} color={Colors.accent} />
+        {/* Date & Time */}
+        <View style={detailRow}>
+          <View style={iconContainer}>
+            <Ionicons name="calendar" size={18} color={colors.accent} />
           </View>
           <View>
-            <Text style={styles.detailLabel}>Date & Time</Text>
-            <Text style={styles.detailValue} selectable>
+            <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Date & Time</Text>
+            <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
               {formatDateShort(session.date)} at {timeDisplay()}
             </Text>
           </View>
         </View>
 
         {/* Duration */}
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconContainer}>
-            <Ionicons name="time" size={18} color={Colors.accent} />
+        <View style={detailRow}>
+          <View style={iconContainer}>
+            <Ionicons name="time" size={18} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.detailLabel}>Duration</Text>
+            <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Duration</Text>
             {isEditing ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 4 }}>
-                <Pressable
-                  onPress={() => setEditDuration(Math.max(5, editDuration - 5))}
-                  style={styles.miniStepper}
-                >
-                  <Ionicons name="remove" size={16} color={Colors.primary} />
+                <Pressable onPress={() => setEditDuration(Math.max(5, editDuration - 5))} style={miniStepper}>
+                  <Ionicons name="remove" size={16} color={colors.accent} />
                 </Pressable>
-                <Text style={[styles.detailValue, { fontVariant: ["tabular-nums"] }]} selectable>
+                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, fontVariant: ["tabular-nums"] }} selectable>
                   {editDuration} min
                 </Text>
-                <Pressable
-                  onPress={() => setEditDuration(editDuration + 5)}
-                  style={styles.miniStepper}
-                >
-                  <Ionicons name="add" size={16} color={Colors.primary} />
+                <Pressable onPress={() => setEditDuration(editDuration + 5)} style={miniStepper}>
+                  <Ionicons name="add" size={16} color={colors.accent} />
                 </Pressable>
               </View>
             ) : (
-              <Text style={styles.detailValue} selectable>
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
                 {session.durationMinutes} minutes
               </Text>
             )}
@@ -183,20 +201,24 @@ export default function SessionDetailScreen() {
         </View>
 
         {/* Location */}
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconContainer}>
-            <Ionicons name="location" size={18} color={Colors.accent} />
+        <View style={detailRow}>
+          <View style={iconContainer}>
+            <Ionicons name="location" size={18} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.detailLabel}>Location</Text>
+            <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Location</Text>
             {isEditing ? (
               <TextInput
-                style={styles.editInput}
+                style={{
+                  fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                  borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
+                  paddingHorizontal: 10, paddingVertical: 8, marginTop: 4, backgroundColor: colors.background,
+                }}
                 value={editLocation}
                 onChangeText={setEditLocation}
               />
             ) : (
-              <Text style={styles.detailValue} selectable>
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
                 {session.location}
               </Text>
             )}
@@ -204,39 +226,37 @@ export default function SessionDetailScreen() {
         </View>
 
         {/* Position */}
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconContainer}>
-            <Ionicons name="body" size={18} color={Colors.accent} />
+        <View style={detailRow}>
+          <View style={iconContainer}>
+            <Ionicons name="body" size={18} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.detailLabel}>Position</Text>
+            <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Position</Text>
             {isEditing ? (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                {POSITIONS.map((pos) => (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ flexGrow: 0, marginTop: 6 }}
+                contentContainerStyle={{ gap: 6 }}
+              >
+                {positions.map((pos) => (
                   <Pressable
                     key={pos}
                     onPress={() => setEditPosition(pos)}
                     style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      backgroundColor: editPosition === pos ? Colors.chipActive : Colors.chipInactive,
+                      paddingHorizontal: 12, paddingVertical: 6,
+                      backgroundColor: editPosition === pos ? colors.chipActive : colors.chipInactive,
                       borderRadius: 16,
                     }}
                   >
-                    <Text
-                      style={{
-                        fontFamily: Fonts.medium,
-                        fontSize: 12,
-                        color: editPosition === pos ? Colors.chipTextActive : Colors.chipTextInactive,
-                      }}
-                    >
+                    <Text style={{ fontFamily: Fonts.medium, fontSize: 12, color: editPosition === pos ? colors.chipTextActive : colors.chipTextInactive }}>
                       {pos}
                     </Text>
                   </Pressable>
                 ))}
-              </View>
+              </ScrollView>
             ) : (
-              <Text style={styles.detailValue} selectable>
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
                 {session.position}
               </Text>
             )}
@@ -244,31 +264,26 @@ export default function SessionDetailScreen() {
         </View>
 
         {/* Orgasm */}
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconContainer}>
-            <Ionicons name="heart" size={18} color={Colors.accent} />
+        <View style={detailRow}>
+          <View style={iconContainer}>
+            <Ionicons name="heart" size={18} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.detailLabel}>Orgasm</Text>
+            <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Orgasm</Text>
             {isEditing ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 4 }}>
                 <Pressable onPress={() => setEditOrgasm(!editOrgasm)}>
                   <View
                     style={{
-                      width: 40,
-                      height: 24,
-                      borderRadius: 12,
-                      backgroundColor: editOrgasm ? Colors.accent : "#DDD",
-                      justifyContent: "center",
-                      paddingHorizontal: 2,
+                      width: 40, height: 24, borderRadius: 12,
+                      backgroundColor: editOrgasm ? colors.accent : colors.inputBorder,
+                      justifyContent: "center", paddingHorizontal: 2,
                     }}
                   >
                     <View
                       style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        backgroundColor: Colors.white,
+                        width: 20, height: 20, borderRadius: 10,
+                        backgroundColor: "#FFFFFF",
                         alignSelf: editOrgasm ? "flex-end" : "flex-start",
                       }}
                     />
@@ -276,30 +291,19 @@ export default function SessionDetailScreen() {
                 </Pressable>
                 {editOrgasm && (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Pressable
-                      onPress={() => setEditOrgasmCount(Math.max(1, editOrgasmCount - 1))}
-                      style={styles.miniStepper}
-                    >
-                      <Text style={{ fontFamily: Fonts.bold, color: Colors.primary }}>−</Text>
+                    <Pressable onPress={() => setEditOrgasmCount(Math.max(1, editOrgasmCount - 1))} style={miniStepper}>
+                      <Text style={{ fontFamily: Fonts.bold, color: colors.accent }}>−</Text>
                     </Pressable>
-                    <Text style={{ fontFamily: Fonts.bold, fontSize: 16, color: Colors.text }}>
-                      {editOrgasmCount}
-                    </Text>
-                    <Pressable
-                      onPress={() => setEditOrgasmCount(editOrgasmCount + 1)}
-                      style={styles.miniStepper}
-                    >
-                      <Text style={{ fontFamily: Fonts.bold, color: Colors.primary }}>+</Text>
+                    <Text style={{ fontFamily: Fonts.bold, fontSize: 16, color: colors.text }}>{editOrgasmCount}</Text>
+                    <Pressable onPress={() => setEditOrgasmCount(editOrgasmCount + 1)} style={miniStepper}>
+                      <Text style={{ fontFamily: Fonts.bold, color: colors.accent }}>+</Text>
                     </Pressable>
                   </View>
                 )}
               </View>
             ) : (
               <Text
-                style={[
-                  styles.detailValue,
-                  { color: session.orgasm ? Colors.success : Colors.error },
-                ]}
+                style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: session.orgasm ? colors.success : colors.error, marginTop: 2 }}
                 selectable
               >
                 {session.orgasm ? `Yes (${session.orgasmCount} time${session.orgasmCount > 1 ? "s" : ""})` : "No"}
@@ -310,23 +314,28 @@ export default function SessionDetailScreen() {
 
         {/* Notes */}
         {(session.notes || isEditing) && (
-          <View style={styles.detailRow}>
-            <View style={styles.detailIconContainer}>
-              <Ionicons name="document-text" size={18} color={Colors.accent} />
+          <View style={detailRow}>
+            <View style={iconContainer}>
+              <Ionicons name="document-text" size={18} color={colors.accent} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.detailLabel}>Notes</Text>
+              <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Notes</Text>
               {isEditing ? (
                 <TextInput
-                  style={[styles.editInput, { minHeight: 60, textAlignVertical: "top" }]}
+                  style={{
+                    fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                    borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
+                    paddingHorizontal: 10, paddingVertical: 8, marginTop: 4, backgroundColor: colors.background,
+                    minHeight: 60, textAlignVertical: "top",
+                  }}
                   value={editNotes}
                   onChangeText={setEditNotes}
                   multiline
                   placeholder="Add notes..."
-                  placeholderTextColor={Colors.textSecondary}
+                  placeholderTextColor={colors.textSecondary}
                 />
               ) : (
-                <Text style={styles.detailValue} selectable>
+                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
                   {session.notes || "—"}
                 </Text>
               )}
@@ -341,131 +350,51 @@ export default function SessionDetailScreen() {
               <Pressable
                 onPress={() => setIsEditing(false)}
                 style={({ pressed }) => ({
-                  flex: 1,
-                  backgroundColor: Colors.chipInactive,
-                  borderRadius: 12,
-                  borderCurve: "continuous",
-                  paddingVertical: 14,
-                  alignItems: "center",
+                  flex: 1, backgroundColor: colors.chipInactive, borderRadius: 12,
+                  borderCurve: "continuous", paddingVertical: 14, alignItems: "center",
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: Colors.text }}>
-                  Cancel
-                </Text>
+                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={handleSaveEdit}
                 style={({ pressed }) => ({
-                  flex: 1,
-                  backgroundColor: Colors.accent,
-                  borderRadius: 12,
-                  borderCurve: "continuous",
-                  paddingVertical: 14,
-                  alignItems: "center",
+                  flex: 1, backgroundColor: colors.accent, borderRadius: 12,
+                  borderCurve: "continuous", paddingVertical: 14, alignItems: "center",
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: Colors.white }}>
-                  Save Changes
-                </Text>
+                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: "#FFFFFF" }}>Save Changes</Text>
               </Pressable>
             </View>
           ) : (
             <Pressable
               onPress={() => setIsEditing(true)}
               style={({ pressed }) => ({
-                backgroundColor: Colors.accent,
-                borderRadius: 12,
-                borderCurve: "continuous",
-                paddingVertical: 14,
-                alignItems: "center",
-                flexDirection: "row",
-                justifyContent: "center",
-                gap: 8,
-                opacity: pressed ? 0.9 : 1,
+                backgroundColor: colors.accent, borderRadius: 12, borderCurve: "continuous",
+                paddingVertical: 14, alignItems: "center", flexDirection: "row",
+                justifyContent: "center", gap: 8, opacity: pressed ? 0.9 : 1,
                 boxShadow: '0 4px 16px rgba(201, 116, 138, 0.3)',
               })}
             >
-              <Ionicons name="create-outline" size={18} color={Colors.white} />
-              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: Colors.white }}>
-                Edit Session
-              </Text>
+              <Ionicons name="create-outline" size={18} color="#FFFFFF" />
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: "#FFFFFF" }}>Edit Session</Text>
             </Pressable>
           )}
 
           <Pressable
             onPress={handleDelete}
             style={({ pressed }) => ({
-              backgroundColor: "transparent",
-              borderRadius: 12,
-              borderCurve: "continuous",
-              paddingVertical: 14,
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: Colors.error,
-              opacity: pressed ? 0.9 : 1,
+              backgroundColor: "transparent", borderRadius: 12, borderCurve: "continuous",
+              paddingVertical: 14, alignItems: "center", borderWidth: 1,
+              borderColor: colors.destructive, opacity: pressed ? 0.9 : 1,
             })}
           >
-            <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: Colors.error }}>
-              Delete Session
-            </Text>
+            <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.destructive }}>Delete Session</Text>
           </Pressable>
         </View>
       </ScrollView>
     </View>
   );
 }
-
-const styles = {
-  detailRow: {
-    flexDirection: "row" as const,
-    alignItems: "flex-start" as const,
-    gap: 14,
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    borderCurve: "continuous" as const,
-    padding: 16,
-    boxShadow: '0 2px 8px rgba(74, 25, 66, 0.04)',
-  },
-  detailIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.chipInactive,
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
-    marginTop: 2,
-  },
-  detailLabel: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: Colors.textSecondary,
-  } as const,
-  detailValue: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: Colors.text,
-    marginTop: 2,
-  } as const,
-  editInput: {
-    fontFamily: Fonts.regular,
-    fontSize: 14,
-    color: Colors.text,
-    borderWidth: 1,
-    borderColor: Colors.inputBorder,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 4,
-    backgroundColor: Colors.background,
-  } as const,
-  miniStepper: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.chipInactive,
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
-  },
-};

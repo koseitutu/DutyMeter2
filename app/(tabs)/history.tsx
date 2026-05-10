@@ -2,12 +2,12 @@ import { useState, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Colors } from "@/constants/Colors";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
 import { formatSessionDate } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { Session } from "@/store/types";
+import { useTheme } from "@/components/theme-provider";
 
 type FilterType = "all" | "orgasm-yes" | "orgasm-no";
 type SortType = "newest" | "oldest";
@@ -15,6 +15,7 @@ type SortType = "newest" | "oldest";
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colors } = useTheme();
   const sessions = useAppStore((s) => s.sessions);
   const deleteSession = useAppStore((s) => s.deleteSession);
   const [filter, setFilter] = useState<FilterType>("all");
@@ -52,28 +53,48 @@ export default function HistoryScreen() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View
         style={{
-          backgroundColor: Colors.primary,
+          backgroundColor: colors.headerBg,
           paddingTop: insets.top + 16,
           paddingBottom: 24,
           paddingHorizontal: 20,
           borderBottomLeftRadius: 24,
           borderBottomRightRadius: 24,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <Text
           style={{
             fontFamily: Fonts.heading,
             fontSize: 26,
-            color: Colors.white,
+            color: colors.headerText,
             textAlign: "center",
           }}
         >
           Activity History
         </Text>
+        <Pressable
+          onPress={() => router.push("/search")}
+          hitSlop={12}
+          style={{
+            position: "absolute",
+            right: 20,
+            bottom: 28,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: "rgba(255,255,255,0.12)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Ionicons name="search" size={18} color={colors.headerText} />
+        </Pressable>
       </View>
 
       {/* Filter Bar */}
@@ -86,24 +107,24 @@ export default function HistoryScreen() {
           marginHorizontal: 20,
           marginTop: 16,
           marginBottom: 8,
-          backgroundColor: Colors.white,
+          backgroundColor: colors.surface,
           borderRadius: 10,
           borderCurve: "continuous",
           paddingHorizontal: 14,
           paddingVertical: 12,
           borderWidth: 1,
-          borderColor: Colors.inputBorder,
+          borderColor: colors.inputBorder,
         }}
       >
-        <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: Colors.text }}>
+        <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: colors.text }}>
           Filter By:{" "}
-          <Text style={{ color: Colors.textSecondary }}>
+          <Text style={{ color: colors.textSecondary }}>
             {filter === "all" ? "All" : filter === "orgasm-yes" ? "Orgasm ✓" : "No Orgasm"}
             {" · "}
             {sort === "newest" ? "Newest First" : "Oldest First"}
           </Text>
         </Text>
-        <Ionicons name="chevron-down" size={16} color={Colors.textSecondary} />
+        <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
       </Pressable>
 
       {showFilter && (
@@ -111,15 +132,15 @@ export default function HistoryScreen() {
           style={{
             marginHorizontal: 20,
             marginBottom: 8,
-            backgroundColor: Colors.white,
+            backgroundColor: colors.surface,
             borderRadius: 12,
             borderCurve: "continuous",
             padding: 14,
             gap: 10,
-            boxShadow: '0 4px 12px rgba(74, 25, 66, 0.08)',
+            boxShadow: `0 4px 12px ${colors.shadow}`,
           }}
         >
-          <Text style={{ fontFamily: Fonts.semiBold, fontSize: 12, color: Colors.textSecondary }}>
+          <Text style={{ fontFamily: Fonts.semiBold, fontSize: 12, color: colors.textSecondary }}>
             ORGASM FILTER
           </Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
@@ -131,7 +152,7 @@ export default function HistoryScreen() {
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 8,
-                    backgroundColor: filter === val ? Colors.chipActive : Colors.chipInactive,
+                    backgroundColor: filter === val ? colors.chipActive : colors.chipInactive,
                     borderRadius: 20,
                   }}
                 >
@@ -139,7 +160,7 @@ export default function HistoryScreen() {
                     style={{
                       fontFamily: Fonts.medium,
                       fontSize: 12,
-                      color: filter === val ? Colors.chipTextActive : Colors.chipTextInactive,
+                      color: filter === val ? colors.chipTextActive : colors.chipTextInactive,
                     }}
                   >
                     {label}
@@ -149,7 +170,7 @@ export default function HistoryScreen() {
             )}
           </View>
           <Text
-            style={{ fontFamily: Fonts.semiBold, fontSize: 12, color: Colors.textSecondary, marginTop: 4 }}
+            style={{ fontFamily: Fonts.semiBold, fontSize: 12, color: colors.textSecondary, marginTop: 4 }}
           >
             SORT
           </Text>
@@ -161,7 +182,7 @@ export default function HistoryScreen() {
                 style={{
                   paddingHorizontal: 14,
                   paddingVertical: 8,
-                  backgroundColor: sort === val ? Colors.chipActive : Colors.chipInactive,
+                  backgroundColor: sort === val ? colors.chipActive : colors.chipInactive,
                   borderRadius: 20,
                 }}
               >
@@ -169,7 +190,7 @@ export default function HistoryScreen() {
                   style={{
                     fontFamily: Fonts.medium,
                     fontSize: 12,
-                    color: sort === val ? Colors.chipTextActive : Colors.chipTextInactive,
+                    color: sort === val ? colors.chipTextActive : colors.chipTextInactive,
                   }}
                 >
                   {label}
@@ -188,19 +209,19 @@ export default function HistoryScreen() {
         {filteredSessions.length === 0 ? (
           <View
             style={{
-              backgroundColor: Colors.white,
+              backgroundColor: colors.surface,
               borderRadius: 12,
               borderCurve: "continuous",
               padding: 40,
               alignItems: "center",
             }}
           >
-            <Ionicons name="document-text-outline" size={36} color={Colors.accent} />
+            <Ionicons name="document-text-outline" size={36} color={colors.accent} />
             <Text
               style={{
                 fontFamily: Fonts.medium,
                 fontSize: 15,
-                color: Colors.textSecondary,
+                color: colors.textSecondary,
                 marginTop: 12,
                 textAlign: "center",
               }}
@@ -220,22 +241,22 @@ export default function HistoryScreen() {
               {({ pressed }) => (
                 <View
                   style={{
-                    backgroundColor: Colors.white,
+                    backgroundColor: colors.surface,
                     borderRadius: 12,
                     borderCurve: "continuous",
                     paddingVertical: 14,
                     paddingHorizontal: 16,
                     borderLeftWidth: 3,
-                    borderLeftColor: Colors.accent,
+                    borderLeftColor: colors.accent,
                     opacity: pressed ? 0.9 : 1,
-                    boxShadow: '0 2px 8px rgba(74, 25, 66, 0.05)',
+                    boxShadow: `0 2px 8px ${colors.shadow}`,
                   }}
                 >
                   <Text
                     style={{
                       fontFamily: Fonts.semiBold,
                       fontSize: 14,
-                      color: Colors.text,
+                      color: colors.text,
                     }}
                     selectable
                   >
@@ -245,7 +266,7 @@ export default function HistoryScreen() {
                     style={{
                       fontFamily: Fonts.regular,
                       fontSize: 13,
-                      color: Colors.textSecondary,
+                      color: colors.textSecondary,
                       marginTop: 3,
                     }}
                   >
@@ -255,7 +276,7 @@ export default function HistoryScreen() {
                     style={{
                       fontFamily: Fonts.medium,
                       fontSize: 13,
-                      color: session.orgasm ? Colors.success : Colors.error,
+                      color: session.orgasm ? colors.success : colors.error,
                       marginTop: 3,
                     }}
                   >

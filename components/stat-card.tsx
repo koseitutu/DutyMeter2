@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native';
-import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Typography';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/components/theme-provider';
 
 interface StatCardProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -10,6 +10,8 @@ interface StatCardProps {
 }
 
 export function StatCard({ icon, label, value }: StatCardProps) {
+  const { colors } = useTheme();
+
   return (
     <View
       style={{
@@ -17,17 +19,18 @@ export function StatCard({ icon, label, value }: StatCardProps) {
         alignItems: 'center',
         paddingVertical: 14,
         paddingHorizontal: 8,
-        backgroundColor: Colors.white,
+        backgroundColor: colors.surface,
         borderRadius: 12,
         borderCurve: 'continuous',
+        boxShadow: `0 2px 8px ${colors.shadow}`,
       }}
     >
-      <Ionicons name={icon} size={20} color={Colors.accent} />
+      <Ionicons name={icon} size={20} color={colors.accent} />
       <Text
         style={{
           fontFamily: Fonts.bold,
           fontSize: 22,
-          color: Colors.text,
+          color: colors.text,
           marginTop: 4,
           fontVariant: ['tabular-nums'],
         }}
@@ -39,7 +42,7 @@ export function StatCard({ icon, label, value }: StatCardProps) {
         style={{
           fontFamily: Fonts.regular,
           fontSize: 11,
-          color: Colors.textSecondary,
+          color: colors.textSecondary,
           marginTop: 2,
         }}
       >

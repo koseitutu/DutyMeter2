@@ -11,30 +11,33 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Colors } from "@/constants/Colors";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
 import { getNowISO } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/components/theme-provider";
 
-const POSITIONS = ["Missionary", "Cowgirl", "Doggy Style", "Spooning", "Other"];
 const LOCATIONS = ["Home", "Partner's Place", "Hotel", "Other"];
 
 export default function LogSessionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colors } = useTheme();
   const addSession = useAppStore((s) => s.addSession);
+  const positions = useAppStore((s) => s.settings.customPositions);
 
   const now = getNowISO();
   const [date] = useState(now.date);
   const [time] = useState(now.time);
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [location, setLocation] = useState("");
-  const [position, setPosition] = useState("Missionary");
+  const [position, setPosition] = useState(positions[0] || "Missionary");
   const [orgasm, setOrgasm] = useState(true);
   const [orgasmCount, setOrgasmCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [showLocationPresets, setShowLocationPresets] = useState(false);
+  const [customPosition, setCustomPosition] = useState("");
+  const [showCustomPosition, setShowCustomPosition] = useState(false);
 
   const handleSave = useCallback(() => {
     if (!location.trim()) {
@@ -49,7 +52,7 @@ export default function LogSessionScreen() {
       time,
       durationMinutes,
       location: location.trim(),
-      position,
+      position: showCustomPosition && customPosition.trim() ? customPosition.trim() : position,
       orgasm,
       orgasmCount: orgasm ? orgasmCount : 0,
       notes: notes.trim(),
@@ -57,15 +60,15 @@ export default function LogSessionScreen() {
     });
 
     router.back();
-  }, [date, time, durationMinutes, location, position, orgasm, orgasmCount, notes, addSession, router]);
+  }, [date, time, durationMinutes, location, position, orgasm, orgasmCount, notes, addSession, router, showCustomPosition, customPosition]);
 
   const formatDateForDisplay = (dateStr: string, timeStr: string): string => {
-    const [year, month, day] = dateStr.split("-").map(Number);
+    const [, month, day] = dateStr.split("-").map(Number);
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const [hours, minutes] = timeStr.split(":").map(Number);
     const period = hours >= 12 ? "PM" : "AM";
     const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    return `${months[month - 1]} ${day}, ${year}, ${displayHour}:${minutes.toString().padStart(2, "0")} ${period}`;
+    return `${months[month - 1]} ${day}, ${displayHour}:${minutes.toString().padStart(2, "0")} ${period}`;
   };
 
   return (
@@ -74,14 +77,14 @@ export default function LogSessionScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        style={{ flex: 1, backgroundColor: Colors.background }}
+        style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={{ paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View
           style={{
-            backgroundColor: Colors.primary,
+            backgroundColor: colors.headerBg,
             paddingTop: insets.top + 16,
             paddingBottom: 24,
             paddingHorizontal: 20,
@@ -93,13 +96,13 @@ export default function LogSessionScreen() {
           }}
         >
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="close" size={26} color={Colors.white} />
+            <Ionicons name="close" size={26} color={colors.headerText} />
           </Pressable>
           <Text
             style={{
               fontFamily: Fonts.heading,
               fontSize: 22,
-              color: Colors.white,
+              color: colors.headerText,
             }}
           >
             Log Session
@@ -110,36 +113,38 @@ export default function LogSessionScreen() {
         <View style={{ padding: 20, gap: 20 }}>
           {/* Date & Time */}
           <View>
-            <Text style={styles.label}>Date & Time</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={formatDateForDisplay(date, time)}
-                onChangeText={(text) => {
-                  // For simplicity, we keep the current date/time
+            <Text style={labelStyle(colors)}>Date & Time</Text>
+            <View style={inputContainerStyle(colors)}>
+              <Text
+                style={{
+                  fontFamily: Fonts.regular,
+                  fontSize: 15,
+                  color: colors.text,
+                  flex: 1,
                 }}
-                editable={false}
-              />
-              <Ionicons name="calendar-outline" size={20} color={Colors.textSecondary} />
+              >
+                {formatDateForDisplay(date, time)}
+              </Text>
+              <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
             </View>
           </View>
 
           {/* Duration */}
           <View>
-            <Text style={styles.label}>Duration</Text>
+            <Text style={labelStyle(colors)}>Duration</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
               <Pressable
                 onPress={() => setDurationMinutes(Math.max(5, durationMinutes - 5))}
-                style={styles.stepperButton}
+                style={stepperStyle(colors)}
               >
-                <Ionicons name="remove" size={20} color={Colors.primary} />
+                <Ionicons name="remove" size={20} color={colors.accent} />
               </Pressable>
               <View style={{ flex: 1, alignItems: "center" }}>
                 <Text
                   style={{
                     fontFamily: Fonts.semiBold,
                     fontSize: 18,
-                    color: Colors.accent,
+                    color: colors.accent,
                     fontVariant: ["tabular-nums"],
                   }}
                   selectable
@@ -149,22 +154,22 @@ export default function LogSessionScreen() {
               </View>
               <Pressable
                 onPress={() => setDurationMinutes(durationMinutes + 5)}
-                style={styles.stepperButton}
+                style={stepperStyle(colors)}
               >
-                <Ionicons name="add" size={20} color={Colors.primary} />
+                <Ionicons name="add" size={20} color={colors.accent} />
               </Pressable>
             </View>
           </View>
 
           {/* Location */}
           <View>
-            <Text style={styles.label}>Location</Text>
+            <Text style={labelStyle(colors)}>Location</Text>
             <TextInput
-              style={[styles.inputContainer, styles.input]}
+              style={[inputContainerStyle(colors), { fontFamily: Fonts.regular, fontSize: 15, color: colors.text }]}
               value={location}
               onChangeText={setLocation}
               placeholder="e.g., Home, Hotel"
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               onFocus={() => setShowLocationPresets(true)}
               onBlur={() => setTimeout(() => setShowLocationPresets(false), 200)}
             />
@@ -185,17 +190,11 @@ export default function LogSessionScreen() {
                     style={{
                       paddingHorizontal: 14,
                       paddingVertical: 8,
-                      backgroundColor: Colors.chipInactive,
+                      backgroundColor: colors.chipInactive,
                       borderRadius: 20,
                     }}
                   >
-                    <Text
-                      style={{
-                        fontFamily: Fonts.medium,
-                        fontSize: 13,
-                        color: Colors.chipTextInactive,
-                      }}
-                    >
+                    <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: colors.chipTextInactive }}>
                       {loc}
                     </Text>
                   </Pressable>
@@ -206,16 +205,24 @@ export default function LogSessionScreen() {
 
           {/* Sex Position */}
           <View>
-            <Text style={styles.label}>Sex Position</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {POSITIONS.map((pos) => (
+            <Text style={labelStyle(colors)}>Sex Position</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0 }}
+              contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+            >
+              {positions.map((pos) => (
                 <Pressable
                   key={pos}
-                  onPress={() => setPosition(pos)}
+                  onPress={() => {
+                    setPosition(pos);
+                    setShowCustomPosition(false);
+                  }}
                   style={{
                     paddingHorizontal: 16,
                     paddingVertical: 10,
-                    backgroundColor: position === pos ? Colors.chipActive : Colors.chipInactive,
+                    backgroundColor: position === pos && !showCustomPosition ? colors.chipActive : colors.chipInactive,
                     borderRadius: 20,
                   }}
                 >
@@ -223,20 +230,52 @@ export default function LogSessionScreen() {
                     style={{
                       fontFamily: Fonts.medium,
                       fontSize: 13,
-                      color: position === pos ? Colors.chipTextActive : Colors.chipTextInactive,
+                      color: position === pos && !showCustomPosition ? colors.chipTextActive : colors.chipTextInactive,
                     }}
                   >
                     {pos}
                   </Text>
                 </Pressable>
               ))}
-            </View>
+              <Pressable
+                onPress={() => setShowCustomPosition(true)}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  backgroundColor: showCustomPosition ? colors.chipActive : colors.chipInactive,
+                  borderRadius: 20,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <Ionicons name="add" size={14} color={showCustomPosition ? colors.chipTextActive : colors.chipTextInactive} />
+                <Text
+                  style={{
+                    fontFamily: Fonts.medium,
+                    fontSize: 13,
+                    color: showCustomPosition ? colors.chipTextActive : colors.chipTextInactive,
+                  }}
+                >
+                  Custom
+                </Text>
+              </Pressable>
+            </ScrollView>
+            {showCustomPosition && (
+              <TextInput
+                style={[inputContainerStyle(colors), { fontFamily: Fonts.regular, fontSize: 15, color: colors.text, marginTop: 10 }]}
+                value={customPosition}
+                onChangeText={setCustomPosition}
+                placeholder="Enter custom position..."
+                placeholderTextColor={colors.textSecondary}
+              />
+            )}
           </View>
 
           {/* Orgasm toggle + count */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 24 }}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Orgasm?</Text>
+              <Text style={labelStyle(colors)}>Orgasm?</Text>
               <Pressable
                 onPress={() => setOrgasm(!orgasm)}
                 style={{
@@ -251,7 +290,7 @@ export default function LogSessionScreen() {
                     width: 48,
                     height: 28,
                     borderRadius: 14,
-                    backgroundColor: orgasm ? Colors.accent : "#DDD",
+                    backgroundColor: orgasm ? colors.accent : colors.inputBorder,
                     justifyContent: "center",
                     paddingHorizontal: 2,
                   }}
@@ -261,19 +300,13 @@ export default function LogSessionScreen() {
                       width: 24,
                       height: 24,
                       borderRadius: 12,
-                      backgroundColor: Colors.white,
+                      backgroundColor: "#FFFFFF",
                       alignSelf: orgasm ? "flex-end" : "flex-start",
                       boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                     }}
                   />
                 </View>
-                <Text
-                  style={{
-                    fontFamily: Fonts.medium,
-                    fontSize: 14,
-                    color: Colors.text,
-                  }}
-                >
+                <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.text }}>
                   {orgasm ? "Yes" : "No"}
                 </Text>
               </Pressable>
@@ -281,19 +314,19 @@ export default function LogSessionScreen() {
 
             {orgasm && (
               <View>
-                <Text style={styles.label}>Orgasm Count</Text>
+                <Text style={labelStyle(colors)}>Orgasm Count</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 4 }}>
                   <Pressable
                     onPress={() => setOrgasmCount(Math.max(1, orgasmCount - 1))}
-                    style={[styles.stepperButton, { width: 32, height: 32 }]}
+                    style={[stepperStyle(colors), { width: 32, height: 32 }]}
                   >
-                    <Text style={{ fontFamily: Fonts.bold, fontSize: 16, color: Colors.primary }}>−</Text>
+                    <Text style={{ fontFamily: Fonts.bold, fontSize: 16, color: colors.accent }}>−</Text>
                   </Pressable>
                   <Text
                     style={{
                       fontFamily: Fonts.bold,
                       fontSize: 18,
-                      color: Colors.text,
+                      color: colors.text,
                       fontVariant: ["tabular-nums"],
                       minWidth: 20,
                       textAlign: "center",
@@ -304,9 +337,9 @@ export default function LogSessionScreen() {
                   </Text>
                   <Pressable
                     onPress={() => setOrgasmCount(orgasmCount + 1)}
-                    style={[styles.stepperButton, { width: 32, height: 32 }]}
+                    style={[stepperStyle(colors), { width: 32, height: 32 }]}
                   >
-                    <Text style={{ fontFamily: Fonts.bold, fontSize: 16, color: Colors.primary }}>+</Text>
+                    <Text style={{ fontFamily: Fonts.bold, fontSize: 16, color: colors.accent }}>+</Text>
                   </Pressable>
                 </View>
               </View>
@@ -315,13 +348,13 @@ export default function LogSessionScreen() {
 
           {/* Notes */}
           <View>
-            <Text style={styles.label}>Notes (optional)</Text>
+            <Text style={labelStyle(colors)}>Notes (optional)</Text>
             <TextInput
-              style={[styles.inputContainer, styles.input, { minHeight: 80, textAlignVertical: "top" }]}
+              style={[inputContainerStyle(colors), { fontFamily: Fonts.regular, fontSize: 15, color: colors.text, minHeight: 80, textAlignVertical: "top" }]}
               value={notes}
               onChangeText={setNotes}
               placeholder="Enter your notes here..."
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               multiline
             />
           </View>
@@ -330,7 +363,7 @@ export default function LogSessionScreen() {
           <Pressable
             onPress={handleSave}
             style={({ pressed }) => ({
-              backgroundColor: Colors.accent,
+              backgroundColor: colors.accent,
               borderRadius: 14,
               borderCurve: "continuous",
               paddingVertical: 16,
@@ -340,13 +373,7 @@ export default function LogSessionScreen() {
               boxShadow: '0 4px 16px rgba(201, 116, 138, 0.3)',
             })}
           >
-            <Text
-              style={{
-                fontFamily: Fonts.semiBold,
-                fontSize: 16,
-                color: Colors.white,
-              }}
-            >
+            <Text style={{ fontFamily: Fonts.semiBold, fontSize: 16, color: "#FFFFFF" }}>
               Save Session
             </Text>
           </Pressable>
@@ -356,36 +383,36 @@ export default function LogSessionScreen() {
   );
 }
 
-const styles = {
-  label: {
+function labelStyle(colors: ReturnType<typeof useTheme>["colors"]) {
+  return {
     fontFamily: Fonts.semiBold,
     fontSize: 14,
-    color: Colors.text,
+    color: colors.text,
     marginBottom: 8,
-  } as const,
-  inputContainer: {
-    backgroundColor: Colors.inputBg,
+  } as const;
+}
+
+function inputContainerStyle(colors: ReturnType<typeof useTheme>["colors"]) {
+  return {
+    backgroundColor: colors.inputBg,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.inputBorder,
+    borderColor: colors.inputBorder,
     paddingHorizontal: 14,
     paddingVertical: 12,
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 8,
-  } as const,
-  input: {
-    fontFamily: Fonts.regular,
-    fontSize: 15,
-    color: Colors.text,
-    flex: 1,
-  } as const,
-  stepperButton: {
+  } as const;
+}
+
+function stepperStyle(colors: ReturnType<typeof useTheme>["colors"]) {
+  return {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.chipInactive,
+    backgroundColor: colors.chipInactive,
     justifyContent: "center" as const,
     alignItems: "center" as const,
-  } as const,
-};
+  } as const;
+}

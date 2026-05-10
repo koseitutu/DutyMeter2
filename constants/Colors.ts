@@ -1,7 +1,8 @@
-export const Colors = {
+export const LightColors = {
   primary: '#4A1942',
   accent: '#C9748A',
   background: '#FDF6F0',
+  surface: '#FFFFFF',
   text: '#1C1C1E',
   textSecondary: '#6B6B6E',
   white: '#FFFFFF',
@@ -23,4 +24,47 @@ export const Colors = {
   gradientEnd: '#6B2D5B',
   barChart: '#C9748A',
   barChartLight: '#E8B4C0',
+  headerBg: '#4A1942',
+  headerText: '#FFFFFF',
+  destructive: '#E53935',
+  separator: '#F0E6E8',
 } as const;
+
+export const DarkColors = {
+  primary: '#6B2D5B',
+  accent: '#D88FA1',
+  background: '#121214',
+  surface: '#1E1E22',
+  text: '#F5F5F7',
+  textSecondary: '#A0A0A5',
+  white: '#FFFFFF',
+  cardBorder: '#2E2E34',
+  success: '#66BB6A',
+  error: '#EF5350',
+  chipActive: '#D88FA1',
+  chipInactive: '#2A2A30',
+  chipTextActive: '#121214',
+  chipTextInactive: '#D88FA1',
+  tabBarBg: '#1A1A1E',
+  tabBarActive: '#D88FA1',
+  tabBarInactive: '#666666',
+  inputBorder: '#3A3A42',
+  inputBg: '#1E1E22',
+  shadow: 'rgba(0, 0, 0, 0.3)',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  gradientStart: '#2A1228',
+  gradientEnd: '#4A1942',
+  barChart: '#D88FA1',
+  barChartLight: '#A05070',
+  headerBg: '#1A1A1E',
+  headerText: '#F5F5F7',
+  destructive: '#EF5350',
+  separator: '#2E2E34',
+} as const;
+
+export type ThemeColors = {
+  [K in keyof typeof LightColors]: string;
+};
+
+// Backwards compat for existing imports
+export const Colors = LightColors;

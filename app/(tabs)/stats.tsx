@@ -1,15 +1,16 @@
 import { useState, useMemo } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Colors } from "@/constants/Colors";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/components/theme-provider";
 
 type DateRange = "7" | "30" | "90" | "all";
 
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const sessions = useAppStore((s) => s.sessions);
   const [dateRange, setDateRange] = useState<DateRange>("30");
 
@@ -61,7 +62,7 @@ export default function StatsScreen() {
 
   // Orgasm rate
   const orgasmStats = useMemo(() => {
-    if (filteredSessions.length === 0) return { rate: 0, avgCount: 0 };
+    if (filteredSessions.length === 0) return { rate: 0, avgCount: "0" };
     const withOrgasm = filteredSessions.filter((s) => s.orgasm);
     const avgCount =
       withOrgasm.length > 0
@@ -86,7 +87,6 @@ export default function StatsScreen() {
     let streak = 0;
     let checkDate = new Date(today);
 
-    // Check current streak
     for (let i = 0; i < uniqueDates.length; i++) {
       const sessionDate = new Date(uniqueDates[i]);
       sessionDate.setHours(0, 0, 0, 0);
@@ -100,7 +100,6 @@ export default function StatsScreen() {
       }
     }
 
-    // Calculate best streak
     for (let i = 0; i < uniqueDates.length; i++) {
       if (i === 0) {
         streak = 1;
@@ -120,15 +119,26 @@ export default function StatsScreen() {
     return { current, best };
   }, [sessions]);
 
+  // Time of day heatmap
+  const timeHeatmap = useMemo(() => {
+    const hours = Array(24).fill(0) as number[];
+    filteredSessions.forEach((s) => {
+      const hour = parseInt(s.time.split(":")[0]);
+      hours[hour]++;
+    });
+    return hours;
+  }, [filteredSessions]);
+
   const maxWeekly = Math.max(...weeklyFrequency, 1);
   const maxPositionCount = topPositions.length > 0 ? topPositions[0][1] : 1;
+  const maxHeatmapVal = Math.max(...timeHeatmap, 1);
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View
         style={{
-          backgroundColor: Colors.primary,
+          backgroundColor: colors.headerBg,
           paddingTop: insets.top + 16,
           paddingBottom: 24,
           paddingHorizontal: 20,
@@ -140,7 +150,7 @@ export default function StatsScreen() {
           style={{
             fontFamily: Fonts.heading,
             fontSize: 26,
-            color: Colors.white,
+            color: colors.headerText,
             textAlign: "center",
           }}
         >
@@ -160,7 +170,7 @@ export default function StatsScreen() {
             alignItems: "center",
           }}
         >
-          <Text style={{ fontFamily: Fonts.semiBold, fontSize: 14, color: Colors.text }}>
+          <Text style={{ fontFamily: Fonts.semiBold, fontSize: 14, color: colors.text }}>
             Date Range
           </Text>
           <View style={{ flexDirection: "row", gap: 6 }}>
@@ -176,7 +186,7 @@ export default function StatsScreen() {
                 style={{
                   paddingHorizontal: 12,
                   paddingVertical: 6,
-                  backgroundColor: dateRange === val ? Colors.chipActive : Colors.chipInactive,
+                  backgroundColor: dateRange === val ? colors.chipActive : colors.chipInactive,
                   borderRadius: 16,
                 }}
               >
@@ -184,7 +194,7 @@ export default function StatsScreen() {
                   style={{
                     fontFamily: Fonts.medium,
                     fontSize: 12,
-                    color: dateRange === val ? Colors.chipTextActive : Colors.chipTextInactive,
+                    color: dateRange === val ? colors.chipTextActive : colors.chipTextInactive,
                   }}
                 >
                   {label}
@@ -197,19 +207,19 @@ export default function StatsScreen() {
         {filteredSessions.length === 0 ? (
           <View
             style={{
-              backgroundColor: Colors.white,
+              backgroundColor: colors.surface,
               borderRadius: 12,
               borderCurve: "continuous",
               padding: 40,
               alignItems: "center",
             }}
           >
-            <Ionicons name="analytics-outline" size={36} color={Colors.accent} />
+            <Ionicons name="analytics-outline" size={36} color={colors.accent} />
             <Text
               style={{
                 fontFamily: Fonts.medium,
                 fontSize: 15,
-                color: Colors.textSecondary,
+                color: colors.textSecondary,
                 marginTop: 12,
                 textAlign: "center",
               }}
@@ -220,8 +230,10 @@ export default function StatsScreen() {
         ) : (
           <>
             {/* Frequency Chart */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Frequency</Text>
+            <View style={cardStyle(colors)}>
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                Frequency
+              </Text>
               <View
                 style={{
                   flexDirection: "row",
@@ -237,7 +249,7 @@ export default function StatsScreen() {
                       style={{
                         fontFamily: Fonts.medium,
                         fontSize: 10,
-                        color: Colors.textSecondary,
+                        color: colors.textSecondary,
                         fontVariant: ["tabular-nums"],
                       }}
                     >
@@ -247,7 +259,7 @@ export default function StatsScreen() {
                       style={{
                         width: 32,
                         height: Math.max(8, (count / maxWeekly) * 80),
-                        backgroundColor: Colors.barChart,
+                        backgroundColor: colors.barChart,
                         borderRadius: 4,
                         borderCurve: "continuous",
                       }}
@@ -256,7 +268,7 @@ export default function StatsScreen() {
                       style={{
                         fontFamily: Fonts.regular,
                         fontSize: 10,
-                        color: Colors.textSecondary,
+                        color: colors.textSecondary,
                       }}
                     >
                       {i === 0 ? "5w" : i === 4 ? "Now" : `${4 - i}w`}
@@ -267,48 +279,64 @@ export default function StatsScreen() {
             </View>
 
             {/* Duration Stats */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Duration Stats</Text>
+            <View style={cardStyle(colors)}>
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                Duration Stats
+              </Text>
               <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
-                <View style={styles.miniStat}>
-                  <Ionicons name="time-outline" size={18} color={Colors.accent} />
-                  <Text style={styles.miniStatValue}>{durationStats.avg} min</Text>
-                  <Text style={styles.miniStatLabel}>Avg</Text>
-                </View>
-                <View style={styles.miniStat}>
-                  <Ionicons name="hourglass-outline" size={18} color={Colors.accent} />
-                  <Text style={styles.miniStatValue}>{durationStats.min} min</Text>
-                  <Text style={styles.miniStatLabel}>Min</Text>
-                </View>
-                <View style={styles.miniStat}>
-                  <Ionicons name="trending-up" size={18} color={Colors.accent} />
-                  <Text style={styles.miniStatValue}>{durationStats.max} min</Text>
-                  <Text style={styles.miniStatLabel}>Max</Text>
-                </View>
+                {([
+                  ["time-outline", durationStats.avg, "Avg"],
+                  ["hourglass-outline", durationStats.min, "Min"],
+                  ["trending-up", durationStats.max, "Max"],
+                ] as const).map(([icon, val, label]) => (
+                  <View
+                    key={label}
+                    style={{
+                      flex: 1,
+                      alignItems: "center",
+                      backgroundColor: colors.background,
+                      borderRadius: 10,
+                      borderCurve: "continuous",
+                      paddingVertical: 12,
+                      paddingHorizontal: 8,
+                      gap: 4,
+                    }}
+                  >
+                    <Ionicons name={icon} size={18} color={colors.accent} />
+                    <Text
+                      style={{
+                        fontFamily: Fonts.bold,
+                        fontSize: 14,
+                        color: colors.text,
+                        fontVariant: ["tabular-nums"],
+                      }}
+                    >
+                      {val} min
+                    </Text>
+                    <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
+                      {label}
+                    </Text>
+                  </View>
+                ))}
               </View>
             </View>
 
-            {/* Top Positions & Orgasm Rate side by side */}
+            {/* Top Positions & Orgasm Rate */}
             <View style={{ flexDirection: "row", gap: 12 }}>
-              {/* Top Positions */}
-              <View style={[styles.card, { flex: 1 }]}>
-                <Text style={styles.cardTitle}>Top Positions</Text>
+              <View style={[cardStyle(colors), { flex: 1 }]}>
+                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                  Top Positions
+                </Text>
                 <View style={{ gap: 8, marginTop: 12 }}>
                   {topPositions.map(([pos, count]) => (
                     <View key={pos} style={{ gap: 4 }}>
-                      <Text
-                        style={{
-                          fontFamily: Fonts.regular,
-                          fontSize: 11,
-                          color: Colors.textSecondary,
-                        }}
-                      >
+                      <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
                         {pos}
                       </Text>
                       <View
                         style={{
                           height: 14,
-                          backgroundColor: Colors.barChart,
+                          backgroundColor: colors.barChart,
                           borderRadius: 3,
                           width: `${(count / maxPositionCount) * 100}%`,
                           minWidth: 20,
@@ -317,23 +345,24 @@ export default function StatsScreen() {
                     </View>
                   ))}
                   {topPositions.length === 0 && (
-                    <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: Colors.textSecondary }}>
+                    <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>
                       No data
                     </Text>
                   )}
                 </View>
               </View>
 
-              {/* Orgasm Rate */}
-              <View style={[styles.card, { flex: 1, alignItems: "center" }]}>
-                <Text style={[styles.cardTitle, { alignSelf: "flex-start" }]}>Orgasm Rate</Text>
+              <View style={[cardStyle(colors), { flex: 1, alignItems: "center" }]}>
+                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, alignSelf: "flex-start" }}>
+                  Orgasm Rate
+                </Text>
                 <View
                   style={{
                     width: 80,
                     height: 80,
                     borderRadius: 40,
                     borderWidth: 6,
-                    borderColor: Colors.barChart,
+                    borderColor: colors.barChart,
                     justifyContent: "center",
                     alignItems: "center",
                     marginTop: 12,
@@ -343,7 +372,7 @@ export default function StatsScreen() {
                     style={{
                       fontFamily: Fonts.bold,
                       fontSize: 18,
-                      color: Colors.text,
+                      color: colors.text,
                       fontVariant: ["tabular-nums"],
                     }}
                     selectable
@@ -355,7 +384,7 @@ export default function StatsScreen() {
                   style={{
                     fontFamily: Fonts.regular,
                     fontSize: 11,
-                    color: Colors.textSecondary,
+                    color: colors.textSecondary,
                     marginTop: 8,
                   }}
                 >
@@ -364,22 +393,69 @@ export default function StatsScreen() {
               </View>
             </View>
 
+            {/* Time of Day Heatmap */}
+            <View style={cardStyle(colors)}>
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                Time of Day
+              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 3,
+                  marginTop: 12,
+                }}
+              >
+                {timeHeatmap.map((count, hour) => {
+                  const intensity = count / maxHeatmapVal;
+                  return (
+                    <View
+                      key={hour}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 4,
+                        backgroundColor: count === 0
+                          ? colors.chipInactive
+                          : `rgba(201, 116, 138, ${0.2 + intensity * 0.8})`,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={{ fontFamily: Fonts.regular, fontSize: 7, color: count > 0 ? "#FFF" : colors.textSecondary }}>
+                        {hour}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
+                <Text style={{ fontFamily: Fonts.regular, fontSize: 10, color: colors.textSecondary }}>12am</Text>
+                <Text style={{ fontFamily: Fonts.regular, fontSize: 10, color: colors.textSecondary }}>6am</Text>
+                <Text style={{ fontFamily: Fonts.regular, fontSize: 10, color: colors.textSecondary }}>12pm</Text>
+                <Text style={{ fontFamily: Fonts.regular, fontSize: 10, color: colors.textSecondary }}>6pm</Text>
+                <Text style={{ fontFamily: Fonts.regular, fontSize: 10, color: colors.textSecondary }}>11pm</Text>
+              </View>
+            </View>
+
             {/* Streak Tracker */}
-            <View style={styles.card}>
+            <View style={cardStyle(colors)}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <View>
-                  <Text style={styles.cardTitle}>Streak Tracker</Text>
+                  <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                    Streak Tracker
+                  </Text>
                   <Text
                     style={{
                       fontFamily: Fonts.medium,
                       fontSize: 14,
-                      color: Colors.text,
+                      color: colors.text,
                       marginTop: 8,
                     }}
                     selectable
                   >
                     Current Streak:{" "}
-                    <Text style={{ fontFamily: Fonts.bold, color: Colors.accent }}>
+                    <Text style={{ fontFamily: Fonts.bold, color: colors.accent }}>
                       {streakData.current} days
                     </Text>
                   </Text>
@@ -387,7 +463,7 @@ export default function StatsScreen() {
                     style={{
                       fontFamily: Fonts.regular,
                       fontSize: 13,
-                      color: Colors.textSecondary,
+                      color: colors.textSecondary,
                       marginTop: 4,
                     }}
                     selectable
@@ -405,38 +481,12 @@ export default function StatsScreen() {
   );
 }
 
-const styles = {
-  card: {
-    backgroundColor: Colors.white,
+function cardStyle(colors: ReturnType<typeof useTheme>["colors"]) {
+  return {
+    backgroundColor: colors.surface,
     borderRadius: 14,
     borderCurve: "continuous" as const,
     padding: 16,
-    boxShadow: '0 2px 10px rgba(74, 25, 66, 0.05)',
-  },
-  cardTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: Colors.text,
-  } as const,
-  miniStat: {
-    flex: 1,
-    alignItems: "center" as const,
-    backgroundColor: Colors.background,
-    borderRadius: 10,
-    borderCurve: "continuous" as const,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    gap: 4,
-  },
-  miniStatValue: {
-    fontFamily: Fonts.bold,
-    fontSize: 14,
-    color: Colors.text,
-    fontVariant: ["tabular-nums"] as ("tabular-nums")[],
-  },
-  miniStatLabel: {
-    fontFamily: Fonts.regular,
-    fontSize: 11,
-    color: Colors.textSecondary,
-  } as const,
-};
+    boxShadow: `0 2px 10px ${colors.shadow}`,
+  };
+}

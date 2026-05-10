@@ -15,6 +15,13 @@ export interface Session {
   createdAt: string; // ISO timestamp
 }
 
+export type DarkMode = 'light' | 'dark' | 'system';
+
+export interface AppSettings {
+  darkMode: DarkMode;
+  customPositions: string[];
+}
+
 export interface Preferences {
   userName?: string;
 }

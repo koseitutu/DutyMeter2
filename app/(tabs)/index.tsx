@@ -1,17 +1,18 @@
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Colors } from "@/constants/Colors";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
 import { StatCard } from "@/components/stat-card";
 import { SessionCard } from "@/components/session-card";
 import { getGreeting, isThisWeek, isThisMonth } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/components/theme-provider";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colors } = useTheme();
   const sessions = useAppStore((s) => s.sessions);
   const userName = useAppStore((s) => s.preferences.userName || "there");
 
@@ -22,20 +23,38 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{ paddingBottom: 40 }}
     >
-      {/* Header with gradient-like background */}
+      {/* Header */}
       <View
         style={{
-          backgroundColor: Colors.primary,
-          paddingTop: insets.top + 20,
+          backgroundColor: colors.headerBg,
+          paddingTop: insets.top + 12,
           paddingBottom: 40,
           paddingHorizontal: 24,
           borderBottomLeftRadius: 28,
           borderBottomRightRadius: 28,
         }}
       >
+        {/* Search icon top right */}
+        <View style={{ flexDirection: "row", justifyContent: "flex-end", marginBottom: 8 }}>
+          <Pressable
+            onPress={() => router.push("/search")}
+            hitSlop={12}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: "rgba(255,255,255,0.12)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons name="search" size={18} color={colors.headerText} />
+          </Pressable>
+        </View>
+
         <View style={{ alignItems: "center" }}>
           {/* Logo */}
           <View
@@ -49,7 +68,7 @@ export default function HomeScreen() {
               marginBottom: 8,
             }}
           >
-            <Text style={{ fontFamily: Fonts.heading, fontSize: 28, color: Colors.white }}>
+            <Text style={{ fontFamily: Fonts.heading, fontSize: 28, color: colors.headerText }}>
               D
             </Text>
           </View>
@@ -57,7 +76,7 @@ export default function HomeScreen() {
             style={{
               fontFamily: Fonts.heading,
               fontSize: 28,
-              color: Colors.white,
+              color: colors.headerText,
             }}
           >
             DutyMeter
@@ -95,7 +114,7 @@ export default function HomeScreen() {
           style={{
             fontFamily: Fonts.headingSemiBold,
             fontSize: 20,
-            color: Colors.text,
+            color: colors.text,
             marginBottom: 14,
           }}
         >
@@ -105,19 +124,19 @@ export default function HomeScreen() {
         {recentSessions.length === 0 ? (
           <View
             style={{
-              backgroundColor: Colors.white,
+              backgroundColor: colors.surface,
               borderRadius: 12,
               borderCurve: "continuous",
               padding: 32,
               alignItems: "center",
             }}
           >
-            <Ionicons name="moon-outline" size={36} color={Colors.accent} />
+            <Ionicons name="moon-outline" size={36} color={colors.accent} />
             <Text
               style={{
                 fontFamily: Fonts.medium,
                 fontSize: 15,
-                color: Colors.textSecondary,
+                color: colors.textSecondary,
                 marginTop: 12,
                 textAlign: "center",
               }}
@@ -144,7 +163,7 @@ export default function HomeScreen() {
         <Pressable
           onPress={() => router.push("/log")}
           style={({ pressed }) => ({
-            backgroundColor: Colors.accent,
+            backgroundColor: colors.accent,
             borderRadius: 14,
             borderCurve: "continuous",
             paddingVertical: 16,
@@ -156,12 +175,12 @@ export default function HomeScreen() {
             boxShadow: '0 4px 16px rgba(201, 116, 138, 0.3)',
           })}
         >
-          <Ionicons name="add-circle" size={22} color={Colors.white} />
+          <Ionicons name="add-circle" size={22} color="#FFFFFF" />
           <Text
             style={{
               fontFamily: Fonts.semiBold,
               fontSize: 16,
-              color: Colors.white,
+              color: "#FFFFFF",
             }}
           >
             Log New Session
