@@ -16,10 +16,14 @@ const DEFAULT_POSITIONS = [
 
 interface SessionsSlice {
   sessions: Session[];
+  archivedSessions: Session[];
   addSession: (session: Session) => void;
   updateSession: (id: string, updates: Partial<Session>) => void;
   deleteSession: (id: string) => void;
   importSessions: (sessions: Session[]) => void;
+  archiveSession: (id: string, duration: '6months' | '1year') => void;
+  restoreSession: (id: string) => void;
+  deleteArchivedSession: (id: string) => void;
 }
 
 interface SettingsSlice {
@@ -41,6 +45,7 @@ export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
       sessions: [],
+      archivedSessions: [],
       settings: {
         darkMode: 'light',
         customPositions: DEFAULT_POSITIONS,
@@ -67,9 +72,47 @@ export const useAppStore = create<AppStore>()(
       importSessions: (sessions: Session[]) =>
         set((state) => {
           const existingIds = new Set(state.sessions.map((s) => s.id));
-          const newSessions = sessions.filter((s) => !existingIds.has(s.id));
+          const archivedIds = new Set(state.archivedSessions.map((s) => s.id));
+          const newSessions = sessions.filter(
+            (s) => !existingIds.has(s.id) && !archivedIds.has(s.id)
+          );
           return { sessions: [...state.sessions, ...newSessions] };
         }),
+
+      archiveSession: (id: string, duration: '6months' | '1year') =>
+        set((state) => {
+          const session = state.sessions.find((s) => s.id === id);
+          if (!session) return state;
+          const archived: Session = {
+            ...session,
+            archivedAt: new Date().toISOString(),
+            archiveDuration: duration,
+          };
+          return {
+            sessions: state.sessions.filter((s) => s.id !== id),
+            archivedSessions: [archived, ...state.archivedSessions],
+          };
+        }),
+
+      restoreSession: (id: string) =>
+        set((state) => {
+          const session = state.archivedSessions.find((s) => s.id === id);
+          if (!session) return state;
+          const restored: Session = {
+            ...session,
+            archivedAt: null,
+            archiveDuration: null,
+          };
+          return {
+            archivedSessions: state.archivedSessions.filter((s) => s.id !== id),
+            sessions: [restored, ...state.sessions],
+          };
+        }),
+
+      deleteArchivedSession: (id: string) =>
+        set((state) => ({
+          archivedSessions: state.archivedSessions.filter((s) => s.id !== id),
+        })),
 
       setDarkMode: (mode: DarkMode) =>
         set((state) => ({
@@ -107,6 +150,7 @@ export const useAppStore = create<AppStore>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         sessions: state.sessions,
+        archivedSessions: state.archivedSessions,
         settings: state.settings,
         preferences: state.preferences,
       }),

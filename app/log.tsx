@@ -30,8 +30,9 @@ export default function LogSessionScreen() {
   const [date] = useState(now.date);
   const [time] = useState(now.time);
   const [durationMinutes, setDurationMinutes] = useState(30);
+  const [rounds, setRounds] = useState(1);
   const [location, setLocation] = useState("");
-  const [position, setPosition] = useState(positions[0] || "Missionary");
+  const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [orgasm, setOrgasm] = useState(true);
   const [orgasmCount, setOrgasmCount] = useState(1);
   const [notes, setNotes] = useState("");
@@ -39,9 +40,28 @@ export default function LogSessionScreen() {
   const [customPosition, setCustomPosition] = useState("");
   const [showCustomPosition, setShowCustomPosition] = useState(false);
 
+  const togglePosition = (pos: string) => {
+    setSelectedPositions((prev) =>
+      prev.includes(pos) ? prev.filter((p) => p !== pos) : [...prev, pos]
+    );
+  };
+
+  const handleAddCustomPosition = () => {
+    const trimmed = customPosition.trim();
+    if (trimmed && !selectedPositions.includes(trimmed)) {
+      setSelectedPositions((prev) => [...prev, trimmed]);
+      setCustomPosition("");
+      setShowCustomPosition(false);
+    }
+  };
+
   const handleSave = useCallback(() => {
     if (!location.trim()) {
       Alert.alert("Missing Info", "Please enter a location.");
+      return;
+    }
+    if (selectedPositions.length === 0) {
+      Alert.alert("Missing Info", "Please select at least one position.");
       return;
     }
 
@@ -51,16 +71,19 @@ export default function LogSessionScreen() {
       date,
       time,
       durationMinutes,
+      rounds,
       location: location.trim(),
-      position: showCustomPosition && customPosition.trim() ? customPosition.trim() : position,
+      positions: selectedPositions,
       orgasm,
       orgasmCount: orgasm ? orgasmCount : 0,
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
+      archivedAt: null,
+      archiveDuration: null,
     });
 
     router.back();
-  }, [date, time, durationMinutes, location, position, orgasm, orgasmCount, notes, addSession, router, showCustomPosition, customPosition]);
+  }, [date, time, durationMinutes, rounds, location, selectedPositions, orgasm, orgasmCount, notes, addSession, router]);
 
   const formatDateForDisplay = (dateStr: string, timeStr: string): string => {
     const [, month, day] = dateStr.split("-").map(Number);
@@ -135,7 +158,7 @@ export default function LogSessionScreen() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
               <Pressable
                 onPress={() => setDurationMinutes(Math.max(5, durationMinutes - 5))}
-                style={stepperStyle(colors)}
+                style={stepperBtnStyle(colors)}
               >
                 <Ionicons name="remove" size={20} color={colors.accent} />
               </Pressable>
@@ -154,7 +177,39 @@ export default function LogSessionScreen() {
               </View>
               <Pressable
                 onPress={() => setDurationMinutes(durationMinutes + 5)}
-                style={stepperStyle(colors)}
+                style={stepperBtnStyle(colors)}
+              >
+                <Ionicons name="add" size={20} color={colors.accent} />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Rounds */}
+          <View>
+            <Text style={labelStyle(colors)}>Rounds</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+              <Pressable
+                onPress={() => setRounds(Math.max(1, rounds - 1))}
+                style={stepperBtnStyle(colors)}
+              >
+                <Ionicons name="remove" size={20} color={colors.accent} />
+              </Pressable>
+              <View style={{ flex: 1, alignItems: "center" }}>
+                <Text
+                  style={{
+                    fontFamily: Fonts.semiBold,
+                    fontSize: 18,
+                    color: colors.accent,
+                    fontVariant: ["tabular-nums"],
+                  }}
+                  selectable
+                >
+                  {rounds}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setRounds(rounds + 1)}
+                style={stepperBtnStyle(colors)}
               >
                 <Ionicons name="add" size={20} color={colors.accent} />
               </Pressable>
@@ -203,40 +258,45 @@ export default function LogSessionScreen() {
             )}
           </View>
 
-          {/* Sex Position */}
+          {/* Sex Positions — Multi-select */}
           <View>
-            <Text style={labelStyle(colors)}>Sex Position</Text>
+            <Text style={labelStyle(colors)}>
+              Positions{" "}
+              <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>
+                (select multiple)
+              </Text>
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={{ flexGrow: 0 }}
               contentContainerStyle={{ gap: 8, paddingRight: 8 }}
             >
-              {positions.map((pos) => (
-                <Pressable
-                  key={pos}
-                  onPress={() => {
-                    setPosition(pos);
-                    setShowCustomPosition(false);
-                  }}
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    backgroundColor: position === pos && !showCustomPosition ? colors.chipActive : colors.chipInactive,
-                    borderRadius: 20,
-                  }}
-                >
-                  <Text
+              {positions.map((pos) => {
+                const isSelected = selectedPositions.includes(pos);
+                return (
+                  <Pressable
+                    key={pos}
+                    onPress={() => togglePosition(pos)}
                     style={{
-                      fontFamily: Fonts.medium,
-                      fontSize: 13,
-                      color: position === pos && !showCustomPosition ? colors.chipTextActive : colors.chipTextInactive,
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      backgroundColor: isSelected ? colors.chipActive : colors.chipInactive,
+                      borderRadius: 20,
                     }}
                   >
-                    {pos}
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text
+                      style={{
+                        fontFamily: Fonts.medium,
+                        fontSize: 13,
+                        color: isSelected ? colors.chipTextActive : colors.chipTextInactive,
+                      }}
+                    >
+                      {isSelected ? "✓ " : ""}{pos}
+                    </Text>
+                  </Pressable>
+                );
+              })}
               <Pressable
                 onPress={() => setShowCustomPosition(true)}
                 style={{
@@ -262,13 +322,52 @@ export default function LogSessionScreen() {
               </Pressable>
             </ScrollView>
             {showCustomPosition && (
-              <TextInput
-                style={[inputContainerStyle(colors), { fontFamily: Fonts.regular, fontSize: 15, color: colors.text, marginTop: 10 }]}
-                value={customPosition}
-                onChangeText={setCustomPosition}
-                placeholder="Enter custom position..."
-                placeholderTextColor={colors.textSecondary}
-              />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 }}>
+                <TextInput
+                  style={[inputContainerStyle(colors), { flex: 1, fontFamily: Fonts.regular, fontSize: 15, color: colors.text }]}
+                  value={customPosition}
+                  onChangeText={setCustomPosition}
+                  placeholder="Enter custom position..."
+                  placeholderTextColor={colors.textSecondary}
+                  onSubmitEditing={handleAddCustomPosition}
+                />
+                <Pressable
+                  onPress={handleAddCustomPosition}
+                  style={{
+                    backgroundColor: colors.accent,
+                    borderRadius: 8,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                  }}
+                >
+                  <Text style={{ fontFamily: Fonts.semiBold, fontSize: 13, color: "#FFFFFF" }}>Add</Text>
+                </Pressable>
+              </View>
+            )}
+            {selectedPositions.length > 0 && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                {selectedPositions.map((pos) => (
+                  <View
+                    key={pos}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                      backgroundColor: colors.chipActive,
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 14,
+                    }}
+                  >
+                    <Text style={{ fontFamily: Fonts.medium, fontSize: 12, color: colors.chipTextActive }}>
+                      {pos}
+                    </Text>
+                    <Pressable onPress={() => togglePosition(pos)} hitSlop={4}>
+                      <Ionicons name="close" size={14} color={colors.chipTextActive} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
             )}
           </View>
 
@@ -318,7 +417,7 @@ export default function LogSessionScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 4 }}>
                   <Pressable
                     onPress={() => setOrgasmCount(Math.max(1, orgasmCount - 1))}
-                    style={[stepperStyle(colors), { width: 32, height: 32 }]}
+                    style={[stepperBtnStyle(colors), { width: 32, height: 32 }]}
                   >
                     <Text style={{ fontFamily: Fonts.bold, fontSize: 16, color: colors.accent }}>−</Text>
                   </Pressable>
@@ -337,7 +436,7 @@ export default function LogSessionScreen() {
                   </Text>
                   <Pressable
                     onPress={() => setOrgasmCount(orgasmCount + 1)}
-                    style={[stepperStyle(colors), { width: 32, height: 32 }]}
+                    style={[stepperBtnStyle(colors), { width: 32, height: 32 }]}
                   >
                     <Text style={{ fontFamily: Fonts.bold, fontSize: 16, color: colors.accent }}>+</Text>
                   </Pressable>
@@ -383,7 +482,7 @@ export default function LogSessionScreen() {
   );
 }
 
-function labelStyle(colors: ReturnType<typeof useTheme>["colors"]) {
+function labelStyle(colors: ReturnType<typeof import("@/components/theme-provider").useTheme>["colors"]) {
   return {
     fontFamily: Fonts.semiBold,
     fontSize: 14,
@@ -392,7 +491,7 @@ function labelStyle(colors: ReturnType<typeof useTheme>["colors"]) {
   } as const;
 }
 
-function inputContainerStyle(colors: ReturnType<typeof useTheme>["colors"]) {
+function inputContainerStyle(colors: ReturnType<typeof import("@/components/theme-provider").useTheme>["colors"]) {
   return {
     backgroundColor: colors.inputBg,
     borderRadius: 10,
@@ -406,7 +505,7 @@ function inputContainerStyle(colors: ReturnType<typeof useTheme>["colors"]) {
   } as const;
 }
 
-function stepperStyle(colors: ReturnType<typeof useTheme>["colors"]) {
+function stepperBtnStyle(colors: ReturnType<typeof import("@/components/theme-provider").useTheme>["colors"]) {
   return {
     width: 40,
     height: 40,

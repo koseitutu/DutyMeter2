@@ -1,27 +1,28 @@
 import { useState, useMemo } from "react";
-import { View, Text, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, Pressable, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/components/theme-provider";
 
-type DateRange = "7" | "30" | "90" | "all";
-
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const sessions = useAppStore((s) => s.sessions);
-  const [dateRange, setDateRange] = useState<DateRange>("30");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const filteredSessions = useMemo(() => {
-    if (dateRange === "all") return sessions;
-    const daysAgo = parseInt(dateRange);
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - daysAgo);
-    cutoff.setHours(0, 0, 0, 0);
-    return sessions.filter((s) => new Date(s.date) >= cutoff);
-  }, [sessions, dateRange]);
+    if (!startDate && !endDate) return sessions;
+    return sessions.filter((s) => {
+      const sessionDate = s.date;
+      if (startDate && sessionDate < startDate) return false;
+      if (endDate && sessionDate > endDate) return false;
+      return true;
+    });
+  }, [sessions, startDate, endDate]);
 
   // Frequency data (sessions per week, last 5 weeks)
   const weeklyFrequency = useMemo(() => {
@@ -49,15 +50,29 @@ export default function StatsScreen() {
     };
   }, [filteredSessions]);
 
-  // Top positions
+  // Rounds stats
+  const roundsStats = useMemo(() => {
+    if (filteredSessions.length === 0) return { avg: 0, max: 0, total: 0 };
+    const rounds = filteredSessions.map((s) => s.rounds ?? 1);
+    return {
+      avg: parseFloat((rounds.reduce((a, b) => a + b, 0) / rounds.length).toFixed(1)),
+      max: Math.max(...rounds),
+      total: rounds.reduce((a, b) => a + b, 0),
+    };
+  }, [filteredSessions]);
+
+  // Top positions (from multi-select)
   const topPositions = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredSessions.forEach((s) => {
-      counts[s.position] = (counts[s.position] || 0) + 1;
+      const positions = s.positions ?? [(s as any).position];
+      positions.forEach((pos: string) => {
+        if (pos) counts[pos] = (counts[pos] || 0) + 1;
+      });
     });
     return Object.entries(counts)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 3);
+      .slice(0, 5);
   }, [filteredSessions]);
 
   // Orgasm rate
@@ -133,6 +148,12 @@ export default function StatsScreen() {
   const maxPositionCount = topPositions.length > 0 ? topPositions[0][1] : 1;
   const maxHeatmapVal = Math.max(...timeHeatmap, 1);
 
+  const clearDateRange = () => {
+    setStartDate("");
+    setEndDate("");
+    setShowDatePicker(false);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
@@ -162,45 +183,109 @@ export default function StatsScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}
       >
-        {/* Date Range Filter */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ fontFamily: Fonts.semiBold, fontSize: 14, color: colors.text }}>
-            Date Range
-          </Text>
-          <View style={{ flexDirection: "row", gap: 6 }}>
-            {([
-              ["7", "7D"],
-              ["30", "30D"],
-              ["90", "90D"],
-              ["all", "All"],
-            ] as const).map(([val, label]) => (
-              <Pressable
-                key={val}
-                onPress={() => setDateRange(val)}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  backgroundColor: dateRange === val ? colors.chipActive : colors.chipInactive,
-                  borderRadius: 16,
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: Fonts.medium,
-                    fontSize: 12,
-                    color: dateRange === val ? colors.chipTextActive : colors.chipTextInactive,
-                  }}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
+        {/* Custom Date Range Picker */}
+        <View style={cardStyle(colors)}>
+          <Pressable
+            onPress={() => setShowDatePicker(!showDatePicker)}
+            style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="calendar-outline" size={18} color={colors.accent} />
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 14, color: colors.text }}>
+                Date Range
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              {(startDate || endDate) && (
+                <Pressable onPress={clearDateRange} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                </Pressable>
+              )}
+              <Ionicons
+                name={showDatePicker ? "chevron-up" : "chevron-down"}
+                size={16}
+                color={colors.textSecondary}
+              />
+            </View>
+          </Pressable>
+
+          {(startDate || endDate) && !showDatePicker && (
+            <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
+              {startDate || "Start"} → {endDate || "End"}
+            </Text>
+          )}
+
+          {showDatePicker && (
+            <View style={{ marginTop: 12, gap: 10 }}>
+              <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: Fonts.medium, fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>
+                    FROM
+                  </Text>
+                  <TextInput
+                    style={{
+                      fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                      borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
+                      paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.inputBg,
+                    }}
+                    value={startDate}
+                    onChangeText={setStartDate}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="numbers-and-punctuation"
+                  />
+                </View>
+                <Ionicons name="arrow-forward" size={16} color={colors.textSecondary} style={{ marginTop: 16 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: Fonts.medium, fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>
+                    TO
+                  </Text>
+                  <TextInput
+                    style={{
+                      fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                      borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
+                      paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.inputBg,
+                    }}
+                    value={endDate}
+                    onChangeText={setEndDate}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="numbers-and-punctuation"
+                  />
+                </View>
+              </View>
+              <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
+                Enter dates in YYYY-MM-DD format. Leave empty for no limit.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Summary */}
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={[cardStyle(colors), { flex: 1, alignItems: "center" }]}>
+            <Text style={{ fontFamily: Fonts.bold, fontSize: 24, color: colors.accent, fontVariant: ["tabular-nums"] }}>
+              {filteredSessions.length}
+            </Text>
+            <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
+              Sessions
+            </Text>
+          </View>
+          <View style={[cardStyle(colors), { flex: 1, alignItems: "center" }]}>
+            <Text style={{ fontFamily: Fonts.bold, fontSize: 24, color: colors.accent, fontVariant: ["tabular-nums"] }}>
+              {orgasmStats.rate}%
+            </Text>
+            <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
+              Orgasm Rate
+            </Text>
+          </View>
+          <View style={[cardStyle(colors), { flex: 1, alignItems: "center" }]}>
+            <Text style={{ fontFamily: Fonts.bold, fontSize: 24, color: colors.accent, fontVariant: ["tabular-nums"] }}>
+              {roundsStats.avg}
+            </Text>
+            <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
+              Avg Rounds
+            </Text>
           </View>
         </View>
 
@@ -232,7 +317,7 @@ export default function StatsScreen() {
             {/* Frequency Chart */}
             <View style={cardStyle(colors)}>
               <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
-                Frequency
+                Weekly Frequency
               </Text>
               <View
                 style={{
@@ -321,6 +406,49 @@ export default function StatsScreen() {
               </View>
             </View>
 
+            {/* Rounds Stats */}
+            <View style={cardStyle(colors)}>
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                Rounds Stats
+              </Text>
+              <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
+                {([
+                  ["repeat", roundsStats.avg, "Avg"],
+                  ["trending-up", roundsStats.max, "Max"],
+                  ["stats-chart", roundsStats.total, "Total"],
+                ] as const).map(([icon, val, label]) => (
+                  <View
+                    key={label}
+                    style={{
+                      flex: 1,
+                      alignItems: "center",
+                      backgroundColor: colors.background,
+                      borderRadius: 10,
+                      borderCurve: "continuous",
+                      paddingVertical: 12,
+                      paddingHorizontal: 8,
+                      gap: 4,
+                    }}
+                  >
+                    <Ionicons name={icon as any} size={18} color={colors.accent} />
+                    <Text
+                      style={{
+                        fontFamily: Fonts.bold,
+                        fontSize: 14,
+                        color: colors.text,
+                        fontVariant: ["tabular-nums"],
+                      }}
+                    >
+                      {val}
+                    </Text>
+                    <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
+                      {label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
             {/* Top Positions & Orgasm Rate */}
             <View style={{ flexDirection: "row", gap: 12 }}>
               <View style={[cardStyle(colors), { flex: 1 }]}>
@@ -330,12 +458,17 @@ export default function StatsScreen() {
                 <View style={{ gap: 8, marginTop: 12 }}>
                   {topPositions.map(([pos, count]) => (
                     <View key={pos} style={{ gap: 4 }}>
-                      <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
-                        {pos}
-                      </Text>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                        <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
+                          {pos}
+                        </Text>
+                        <Text style={{ fontFamily: Fonts.medium, fontSize: 10, color: colors.textSecondary, fontVariant: ["tabular-nums"] }}>
+                          {count}
+                        </Text>
+                      </View>
                       <View
                         style={{
-                          height: 14,
+                          height: 12,
                           backgroundColor: colors.barChart,
                           borderRadius: 3,
                           width: `${(count / maxPositionCount) * 100}%`,
@@ -471,7 +604,18 @@ export default function StatsScreen() {
                     Best Streak: {streakData.best} days
                   </Text>
                 </View>
-                <Text style={{ fontSize: 32 }}>🔥</Text>
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: colors.chipInactive,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Ionicons name="flame" size={24} color={colors.accent} />
+                </View>
               </View>
             </View>
           </>

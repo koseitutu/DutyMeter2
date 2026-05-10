@@ -17,10 +17,14 @@ export default function HistoryScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const sessions = useAppStore((s) => s.sessions);
+  const archivedSessions = useAppStore((s) => s.archivedSessions);
   const deleteSession = useAppStore((s) => s.deleteSession);
+  const restoreSession = useAppStore((s) => s.restoreSession);
+  const deleteArchivedSession = useAppStore((s) => s.deleteArchivedSession);
   const [filter, setFilter] = useState<FilterType>("all");
   const [sort, setSort] = useState<SortType>("newest");
   const [showFilter, setShowFilter] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
 
   const filteredSessions = sessions
     .filter((s) => {
@@ -51,6 +55,41 @@ export default function HistoryScreen() {
     },
     [deleteSession]
   );
+
+  const handleRestoreArchived = useCallback(
+    (session: Session) => {
+      Alert.alert("Restore Session", "Restore this session to your active list?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Restore", onPress: () => restoreSession(session.id) },
+      ]);
+    },
+    [restoreSession]
+  );
+
+  const handleDeleteArchived = useCallback(
+    (session: Session) => {
+      Alert.alert(
+        "Delete Archived Session",
+        "Permanently delete this archived session?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => deleteArchivedSession(session.id),
+          },
+        ]
+      );
+    },
+    [deleteArchivedSession]
+  );
+
+  const getPositionsDisplay = (session: Session) => {
+    if (session.positions && session.positions.length > 0) {
+      return session.positions.join(", ");
+    }
+    return (session as any).position || "Unknown";
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -117,7 +156,7 @@ export default function HistoryScreen() {
         }}
       >
         <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: colors.text }}>
-          Filter By:{" "}
+          Filter:{" "}
           <Text style={{ color: colors.textSecondary }}>
             {filter === "all" ? "All" : filter === "orgasm-yes" ? "Orgasm ✓" : "No Orgasm"}
             {" · "}
@@ -252,16 +291,37 @@ export default function HistoryScreen() {
                     boxShadow: `0 2px 8px ${colors.shadow}`,
                   }}
                 >
-                  <Text
-                    style={{
-                      fontFamily: Fonts.semiBold,
-                      fontSize: 14,
-                      color: colors.text,
-                    }}
-                    selectable
-                  >
-                    {formatSessionDate(session.date, session.time)} - {session.durationMinutes} min.
-                  </Text>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text
+                      style={{
+                        fontFamily: Fonts.semiBold,
+                        fontSize: 14,
+                        color: colors.text,
+                        flex: 1,
+                      }}
+                      selectable
+                    >
+                      {formatSessionDate(session.date, session.time)} · {session.durationMinutes} min
+                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      {session.rounds > 1 && (
+                        <View style={{ backgroundColor: colors.chipInactive, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ fontFamily: Fonts.medium, fontSize: 10, color: colors.textSecondary }}>
+                            ×{session.rounds}
+                          </Text>
+                        </View>
+                      )}
+                      <Text
+                        style={{
+                          fontFamily: Fonts.medium,
+                          fontSize: 13,
+                          color: session.orgasm ? colors.success : colors.error,
+                        }}
+                      >
+                        {session.orgasm ? `✓ ${session.orgasmCount}` : "✗"}
+                      </Text>
+                    </View>
+                  </View>
                   <Text
                     style={{
                       fontFamily: Fonts.regular,
@@ -269,23 +329,110 @@ export default function HistoryScreen() {
                       color: colors.textSecondary,
                       marginTop: 3,
                     }}
+                    numberOfLines={1}
                   >
-                    {session.position}
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: Fonts.medium,
-                      fontSize: 13,
-                      color: session.orgasm ? colors.success : colors.error,
-                      marginTop: 3,
-                    }}
-                  >
-                    Orgasm: {session.orgasm ? `✓ (${session.orgasmCount})` : "✗"}
+                    {getPositionsDisplay(session)}
                   </Text>
                 </View>
               )}
             </Pressable>
           ))
+        )}
+
+        {/* Archive Section */}
+        {archivedSessions.length > 0 && (
+          <View style={{ marginTop: 20 }}>
+            <Pressable
+              onPress={() => setShowArchive(!showArchive)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingVertical: 12,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="archive-outline" size={18} color={colors.textSecondary} />
+                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 14, color: colors.textSecondary }}>
+                  Archived ({archivedSessions.length})
+                </Text>
+              </View>
+              <Ionicons
+                name={showArchive ? "chevron-up" : "chevron-down"}
+                size={16}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+
+            {showArchive && (
+              <View style={{ gap: 10 }}>
+                {archivedSessions.map((session) => (
+                  <View
+                    key={session.id}
+                    style={{
+                      backgroundColor: colors.surface,
+                      borderRadius: 12,
+                      borderCurve: "continuous",
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      borderLeftWidth: 3,
+                      borderLeftColor: colors.textSecondary,
+                      opacity: 0.8,
+                      boxShadow: `0 2px 8px ${colors.shadow}`,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontFamily: Fonts.semiBold,
+                            fontSize: 14,
+                            color: colors.text,
+                          }}
+                        >
+                          {formatSessionDate(session.date, session.time)} · {session.durationMinutes} min
+                        </Text>
+                        <Text
+                          style={{
+                            fontFamily: Fonts.regular,
+                            fontSize: 12,
+                            color: colors.textSecondary,
+                            marginTop: 2,
+                          }}
+                        >
+                          Archived {session.archiveDuration === "6months" ? "6 months" : "1 year"}
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: "row", gap: 8 }}>
+                        <Pressable
+                          onPress={() => handleRestoreArchived(session)}
+                          hitSlop={8}
+                          style={{
+                            width: 32, height: 32, borderRadius: 16,
+                            backgroundColor: colors.chipInactive,
+                            justifyContent: "center", alignItems: "center",
+                          }}
+                        >
+                          <Ionicons name="refresh" size={16} color={colors.accent} />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => handleDeleteArchived(session)}
+                          hitSlop={8}
+                          style={{
+                            width: 32, height: 32, borderRadius: 16,
+                            backgroundColor: colors.chipInactive,
+                            justifyContent: "center", alignItems: "center",
+                          }}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={colors.destructive} />
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         )}
       </ScrollView>
     </View>

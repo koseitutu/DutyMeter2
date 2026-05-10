@@ -14,6 +14,11 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
   const { colors } = useTheme();
   const dateStr = formatSessionDate(session.date, session.time);
 
+  // Support both old single-position and new multi-position format
+  const positionsDisplay = session.positions
+    ? session.positions.join(', ')
+    : (session as any).position || 'Unknown';
+
   return (
     <Pressable onPress={onPress}>
       {({ pressed }) => (
@@ -40,7 +45,7 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
                 }}
                 selectable
               >
-                {dateStr} - {session.durationMinutes} min
+                {dateStr} · {session.durationMinutes} min
               </Text>
               <Text
                 style={{
@@ -49,8 +54,10 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
                   color: colors.textSecondary,
                   marginTop: 2,
                 }}
+                numberOfLines={1}
               >
-                ({session.position})
+                {positionsDisplay}
+                {session.rounds > 1 ? ` · ${session.rounds} rounds` : ''}
               </Text>
             </View>
             {!compact && (
@@ -62,7 +69,7 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
                     color: session.orgasm ? colors.success : colors.error,
                   }}
                 >
-                  Orgasm: {session.orgasm ? '✓' : '✗'}
+                  {session.orgasm ? '✓' : '✗'}
                   {session.orgasm && ` (${session.orgasmCount})`}
                 </Text>
               </View>

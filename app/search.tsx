@@ -18,13 +18,25 @@ export default function SearchScreen() {
   const results = useMemo(() => {
     if (!query.trim()) return [];
     const lower = query.toLowerCase().trim();
-    return sessions.filter(
-      (s) =>
-        s.position.toLowerCase().includes(lower) ||
+    return sessions.filter((s) => {
+      // Search positions (array or legacy single)
+      const positionsMatch = s.positions
+        ? s.positions.some((p) => p.toLowerCase().includes(lower))
+        : (s as any).position?.toLowerCase().includes(lower);
+      return (
+        positionsMatch ||
         s.location.toLowerCase().includes(lower) ||
         (s.notes && s.notes.toLowerCase().includes(lower))
-    );
+      );
+    });
   }, [sessions, query]);
+
+  const getPositionsDisplay = (session: typeof sessions[0]) => {
+    if (session.positions && session.positions.length > 0) {
+      return session.positions.join(", ");
+    }
+    return (session as any).position || "Unknown";
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -152,7 +164,7 @@ export default function SearchScreen() {
                         color: colors.text,
                       }}
                     >
-                      {formatSessionDate(session.date, session.time)} - {session.durationMinutes} min.
+                      {formatSessionDate(session.date, session.time)} · {session.durationMinutes} min
                     </Text>
                     <Text
                       style={{
@@ -162,7 +174,7 @@ export default function SearchScreen() {
                         marginTop: 3,
                       }}
                     >
-                      {session.position} · {session.location}
+                      {getPositionsDisplay(session)} · {session.location}
                     </Text>
                     {session.notes ? (
                       <Text
