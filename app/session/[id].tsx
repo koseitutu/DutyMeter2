@@ -378,7 +378,7 @@ export default function SessionDetailScreen() {
         </View>
 
         {/* Notes */}
-        {(session.notes || isEditing) && (
+        {!!(session.notes || isEditing) && (
           <View style={detailRow}>
             <View style={iconContainer}>
               <Ionicons name="document-text" size={18} color={colors.accent} />

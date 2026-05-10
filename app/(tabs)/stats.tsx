@@ -196,7 +196,7 @@ export default function StatsScreen() {
               </Text>
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              {(startDate || endDate) && (
+              {!!(startDate || endDate) && (
                 <Pressable onPress={clearDateRange} hitSlop={8}>
                   <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
                 </Pressable>
@@ -209,7 +209,7 @@ export default function StatsScreen() {
             </View>
           </Pressable>
 
-          {(startDate || endDate) && !showDatePicker && (
+          {!!(startDate || endDate) && !showDatePicker && (
             <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
               {startDate || "Start"} → {endDate || "End"}
             </Text>
