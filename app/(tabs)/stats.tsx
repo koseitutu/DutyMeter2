@@ -24,16 +24,16 @@ export default function StatsScreen() {
     });
   }, [sessions, startDate, endDate]);
 
-  // Frequency data (sessions per week, last 5 weeks)
+  // Frequency data (sessions per week, last 6 weeks)
   const weeklyFrequency = useMemo(() => {
-    const weeks: number[] = [0, 0, 0, 0, 0];
+    const weeks: number[] = [0, 0, 0, 0, 0, 0];
     const now = new Date();
     filteredSessions.forEach((s) => {
       const sessionDate = new Date(s.date);
       const diffDays = Math.floor((now.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24));
       const weekIndex = Math.floor(diffDays / 7);
-      if (weekIndex >= 0 && weekIndex < 5) {
-        weeks[4 - weekIndex]++;
+      if (weekIndex >= 0 && weekIndex < 6) {
+        weeks[5 - weekIndex]++;
       }
     });
     return weeks;
@@ -65,14 +65,14 @@ export default function StatsScreen() {
   const topPositions = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredSessions.forEach((s) => {
-      const positions = s.positions ?? [(s as any).position];
+      const positions = s.positions ?? [];
       positions.forEach((pos: string) => {
         if (pos) counts[pos] = (counts[pos] || 0) + 1;
       });
     });
     return Object.entries(counts)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 5);
+      .slice(0, 6);
   }, [filteredSessions]);
 
   // Orgasm rate
@@ -139,7 +139,7 @@ export default function StatsScreen() {
     const hours = Array(24).fill(0) as number[];
     filteredSessions.forEach((s) => {
       const hour = parseInt(s.time.split(":")[0]);
-      hours[hour]++;
+      if (!isNaN(hour)) hours[hour]++;
     });
     return hours;
   }, [filteredSessions]);
@@ -192,7 +192,7 @@ export default function StatsScreen() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Ionicons name="calendar-outline" size={18} color={colors.accent} />
               <Text style={{ fontFamily: Fonts.semiBold, fontSize: 14, color: colors.text }}>
-                Date Range
+                Custom Date Range
               </Text>
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -261,7 +261,7 @@ export default function StatsScreen() {
           )}
         </View>
 
-        {/* Summary */}
+        {/* Summary Strip */}
         <View style={{ flexDirection: "row", gap: 8 }}>
           <View style={[cardStyle(colors), { flex: 1, alignItems: "center" }]}>
             <Text style={{ fontFamily: Fonts.bold, fontSize: 24, color: colors.accent, fontVariant: ["tabular-nums"] }}>
@@ -293,7 +293,7 @@ export default function StatsScreen() {
           <View
             style={{
               backgroundColor: colors.surface,
-              borderRadius: 12,
+              borderRadius: 14,
               borderCurve: "continuous",
               padding: 40,
               alignItems: "center",
@@ -324,7 +324,7 @@ export default function StatsScreen() {
                   flexDirection: "row",
                   alignItems: "flex-end",
                   justifyContent: "space-around",
-                  height: 100,
+                  height: 110,
                   marginTop: 12,
                 }}
               >
@@ -342,7 +342,7 @@ export default function StatsScreen() {
                     </Text>
                     <View
                       style={{
-                        width: 32,
+                        width: 28,
                         height: Math.max(8, (count / maxWeekly) * 80),
                         backgroundColor: colors.barChart,
                         borderRadius: 4,
@@ -352,11 +352,11 @@ export default function StatsScreen() {
                     <Text
                       style={{
                         fontFamily: Fonts.regular,
-                        fontSize: 10,
+                        fontSize: 9,
                         color: colors.textSecondary,
                       }}
                     >
-                      {i === 0 ? "5w" : i === 4 ? "Now" : `${4 - i}w`}
+                      {i === 5 ? "Now" : `${5 - i}w`}
                     </Text>
                   </View>
                 ))}
@@ -368,7 +368,7 @@ export default function StatsScreen() {
               <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
                 Duration Stats
               </Text>
-              <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
                 {([
                   ["time-outline", durationStats.avg, "Avg"],
                   ["hourglass-outline", durationStats.min, "Min"],
@@ -383,7 +383,7 @@ export default function StatsScreen() {
                       borderRadius: 10,
                       borderCurve: "continuous",
                       paddingVertical: 12,
-                      paddingHorizontal: 8,
+                      paddingHorizontal: 6,
                       gap: 4,
                     }}
                   >
@@ -395,8 +395,9 @@ export default function StatsScreen() {
                         color: colors.text,
                         fontVariant: ["tabular-nums"],
                       }}
+                      selectable
                     >
-                      {val} min
+                      {val}m
                     </Text>
                     <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
                       {label}
@@ -411,7 +412,7 @@ export default function StatsScreen() {
               <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
                 Rounds Stats
               </Text>
-              <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
                 {([
                   ["repeat", roundsStats.avg, "Avg"],
                   ["trending-up", roundsStats.max, "Max"],
@@ -426,7 +427,7 @@ export default function StatsScreen() {
                       borderRadius: 10,
                       borderCurve: "continuous",
                       paddingVertical: 12,
-                      paddingHorizontal: 8,
+                      paddingHorizontal: 6,
                       gap: 4,
                     }}
                   >
@@ -438,6 +439,7 @@ export default function StatsScreen() {
                         color: colors.text,
                         fontVariant: ["tabular-nums"],
                       }}
+                      selectable
                     >
                       {val}
                     </Text>
@@ -449,62 +451,64 @@ export default function StatsScreen() {
               </View>
             </View>
 
-            {/* Top Positions & Orgasm Rate */}
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={[cardStyle(colors), { flex: 1 }]}>
-                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
-                  Top Positions
-                </Text>
-                <View style={{ gap: 8, marginTop: 12 }}>
-                  {topPositions.map(([pos, count]) => (
-                    <View key={pos} style={{ gap: 4 }}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                        <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
-                          {pos}
-                        </Text>
-                        <Text style={{ fontFamily: Fonts.medium, fontSize: 10, color: colors.textSecondary, fontVariant: ["tabular-nums"] }}>
-                          {count}
-                        </Text>
-                      </View>
+            {/* Top Positions */}
+            <View style={cardStyle(colors)}>
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginBottom: 12 }}>
+                Top Positions
+              </Text>
+              <View style={{ gap: 10 }}>
+                {topPositions.map(([pos, count]) => (
+                  <View key={pos} style={{ gap: 4 }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                      <Text style={{ fontFamily: Fonts.medium, fontSize: 12, color: colors.text }}>
+                        {pos}
+                      </Text>
+                      <Text style={{ fontFamily: Fonts.medium, fontSize: 11, color: colors.textSecondary, fontVariant: ["tabular-nums"] }}>
+                        {count}
+                      </Text>
+                    </View>
+                    <View style={{ height: 8, backgroundColor: colors.chipInactive, borderRadius: 4, overflow: "hidden" }}>
                       <View
                         style={{
-                          height: 12,
+                          height: 8,
                           backgroundColor: colors.barChart,
-                          borderRadius: 3,
+                          borderRadius: 4,
                           width: `${(count / maxPositionCount) * 100}%`,
-                          minWidth: 20,
+                          minWidth: 12,
                         }}
                       />
                     </View>
-                  ))}
-                  {topPositions.length === 0 && (
-                    <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>
-                      No data
-                    </Text>
-                  )}
-                </View>
+                  </View>
+                ))}
+                {topPositions.length === 0 && (
+                  <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>
+                    No data yet
+                  </Text>
+                )}
               </View>
+            </View>
 
-              <View style={[cardStyle(colors), { flex: 1, alignItems: "center" }]}>
-                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, alignSelf: "flex-start" }}>
-                  Orgasm Rate
-                </Text>
+            {/* Orgasm Rate */}
+            <View style={cardStyle(colors)}>
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                Orgasm Rate
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 20, marginTop: 16 }}>
                 <View
                   style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: 40,
-                    borderWidth: 6,
+                    width: 90,
+                    height: 90,
+                    borderRadius: 45,
+                    borderWidth: 7,
                     borderColor: colors.barChart,
                     justifyContent: "center",
                     alignItems: "center",
-                    marginTop: 12,
                   }}
                 >
                   <Text
                     style={{
                       fontFamily: Fonts.bold,
-                      fontSize: 18,
+                      fontSize: 20,
                       color: colors.text,
                       fontVariant: ["tabular-nums"],
                     }}
@@ -513,16 +517,32 @@ export default function StatsScreen() {
                     {orgasmStats.rate}%
                   </Text>
                 </View>
-                <Text
-                  style={{
-                    fontFamily: Fonts.regular,
-                    fontSize: 11,
-                    color: colors.textSecondary,
-                    marginTop: 8,
-                  }}
-                >
-                  Avg Count: {orgasmStats.avgCount}
-                </Text>
+                <View style={{ flex: 1, gap: 8 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ fontFamily: Fonts.regular, fontSize: 13, color: colors.textSecondary }}>
+                      Avg Count
+                    </Text>
+                    <Text style={{ fontFamily: Fonts.semiBold, fontSize: 13, color: colors.text }}>
+                      {orgasmStats.avgCount}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ fontFamily: Fonts.regular, fontSize: 13, color: colors.textSecondary }}>
+                      With Orgasm
+                    </Text>
+                    <Text style={{ fontFamily: Fonts.semiBold, fontSize: 13, color: colors.success }}>
+                      {filteredSessions.filter((s) => s.orgasm).length}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ fontFamily: Fonts.regular, fontSize: 13, color: colors.textSecondary }}>
+                      Without
+                    </Text>
+                    <Text style={{ fontFamily: Fonts.semiBold, fontSize: 13, color: colors.error }}>
+                      {filteredSessions.filter((s) => !s.orgasm).length}
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
 
@@ -545,9 +565,10 @@ export default function StatsScreen() {
                     <View
                       key={hour}
                       style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 4,
+                        width: 24,
+                        height: 24,
+                        borderRadius: 5,
+                        borderCurve: "continuous",
                         backgroundColor: count === 0
                           ? colors.chipInactive
                           : `rgba(201, 116, 138, ${0.2 + intensity * 0.8})`,
@@ -562,7 +583,7 @@ export default function StatsScreen() {
                   );
                 })}
               </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
                 <Text style={{ fontFamily: Fonts.regular, fontSize: 10, color: colors.textSecondary }}>12am</Text>
                 <Text style={{ fontFamily: Fonts.regular, fontSize: 10, color: colors.textSecondary }}>6am</Text>
                 <Text style={{ fontFamily: Fonts.regular, fontSize: 10, color: colors.textSecondary }}>12pm</Text>
@@ -574,7 +595,7 @@ export default function StatsScreen() {
             {/* Streak Tracker */}
             <View style={cardStyle(colors)}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
                     Streak Tracker
                   </Text>
@@ -583,14 +604,15 @@ export default function StatsScreen() {
                       fontFamily: Fonts.medium,
                       fontSize: 14,
                       color: colors.text,
-                      marginTop: 8,
+                      marginTop: 10,
                     }}
                     selectable
                   >
-                    Current Streak:{" "}
-                    <Text style={{ fontFamily: Fonts.bold, color: colors.accent }}>
-                      {streakData.current} days
+                    Current:{" "}
+                    <Text style={{ fontFamily: Fonts.bold, color: colors.accent, fontSize: 18 }}>
+                      {streakData.current}
                     </Text>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}> days</Text>
                   </Text>
                   <Text
                     style={{
@@ -601,20 +623,20 @@ export default function StatsScreen() {
                     }}
                     selectable
                   >
-                    Best Streak: {streakData.best} days
+                    Best: {streakData.best} days
                   </Text>
                 </View>
                 <View
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
+                    width: 52,
+                    height: 52,
+                    borderRadius: 26,
                     backgroundColor: colors.chipInactive,
                     justifyContent: "center",
                     alignItems: "center",
                   }}
                 >
-                  <Ionicons name="flame" size={24} color={colors.accent} />
+                  <Ionicons name="flame" size={26} color={colors.accent} />
                 </View>
               </View>
             </View>

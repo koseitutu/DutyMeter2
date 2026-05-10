@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
-import { formatDateShort } from "@/utils/date-helpers";
+import { formatDateShort, formatDuration } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/components/theme-provider";
 
@@ -30,11 +30,13 @@ export default function SessionDetailScreen() {
   const [isEditing, setIsEditing] = useState(false);
 
   // Edit state
+  const [editDate, setEditDate] = useState(session?.date ?? "");
+  const [editTime, setEditTime] = useState(session?.time ?? "");
   const [editDuration, setEditDuration] = useState(session?.durationMinutes ?? 30);
   const [editRounds, setEditRounds] = useState(session?.rounds ?? 1);
   const [editLocation, setEditLocation] = useState(session?.location ?? "");
   const [editPositions, setEditPositions] = useState<string[]>(
-    session?.positions ?? [(session as any)?.position ?? "Missionary"]
+    session?.positions ?? []
   );
   const [editOrgasm, setEditOrgasm] = useState(session?.orgasm ?? false);
   const [editOrgasmCount, setEditOrgasmCount] = useState(session?.orgasmCount ?? 0);
@@ -70,10 +72,6 @@ export default function SessionDetailScreen() {
     );
   }
 
-  const positionsDisplay = session.positions
-    ? session.positions.join(", ")
-    : (session as any).position || "Unknown";
-
   const handleDelete = () => {
     Alert.alert("Delete Session", "Are you sure you want to delete this session?", [
       { text: "Cancel", style: "cancel" },
@@ -88,28 +86,24 @@ export default function SessionDetailScreen() {
     ]);
   };
 
-  const handleArchive = () => {
+  const handleArchive = (duration: '3months' | '6months' | '1year') => {
+    archiveSession(session.id, duration);
+    router.back();
+  };
+
+  const showArchiveOptions = () => {
     Alert.alert("Archive Session", "Choose archive duration:", [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "6 Months",
-        onPress: () => {
-          archiveSession(session.id, "6months");
-          router.back();
-        },
-      },
-      {
-        text: "1 Year",
-        onPress: () => {
-          archiveSession(session.id, "1year");
-          router.back();
-        },
-      },
+      { text: "3 Months", onPress: () => handleArchive("3months") },
+      { text: "6 Months", onPress: () => handleArchive("6months") },
+      { text: "1 Year", onPress: () => handleArchive("1year") },
     ]);
   };
 
   const handleSaveEdit = () => {
     updateSession(session.id, {
+      date: editDate,
+      time: editTime,
       durationMinutes: editDuration,
       rounds: editRounds,
       location: editLocation.trim(),
@@ -156,9 +150,9 @@ export default function SessionDetailScreen() {
   };
 
   const miniStepper = {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: colors.chipInactive,
     justifyContent: "center" as const,
     alignItems: "center" as const,
@@ -193,18 +187,45 @@ export default function SessionDetailScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 20, gap: 14, paddingBottom: 40 }}
       >
         {/* Date & Time */}
         <View style={detailRow}>
           <View style={iconContainer}>
             <Ionicons name="calendar" size={18} color={colors.accent} />
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Date & Time</Text>
-            <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
-              {formatDateShort(session.date)} at {timeDisplay()}
-            </Text>
+            {isEditing ? (
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                <TextInput
+                  style={{
+                    flex: 1, fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                    borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
+                    paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.background,
+                  }}
+                  value={editDate}
+                  onChangeText={setEditDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textSecondary}
+                />
+                <TextInput
+                  style={{
+                    width: 80, fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                    borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
+                    paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.background,
+                  }}
+                  value={editTime}
+                  onChangeText={setEditTime}
+                  placeholder="HH:MM"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+            ) : (
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
+                {formatDateShort(session.date)} at {timeDisplay()}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -229,7 +250,7 @@ export default function SessionDetailScreen() {
               </View>
             ) : (
               <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
-                {session.durationMinutes} minutes
+                {formatDuration(session.durationMinutes)}
               </Text>
             )}
           </View>
@@ -256,7 +277,7 @@ export default function SessionDetailScreen() {
               </View>
             ) : (
               <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
-                {session.rounds ?? 1} round{(session.rounds ?? 1) > 1 ? "s" : ""}
+                {session.rounds} round{session.rounds > 1 ? "s" : ""}
               </Text>
             )}
           </View>
@@ -322,7 +343,7 @@ export default function SessionDetailScreen() {
               </ScrollView>
             ) : (
               <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text, marginTop: 2 }} selectable>
-                {positionsDisplay}
+                {session.positions.join(", ")}
               </Text>
             )}
           </View>
@@ -340,14 +361,14 @@ export default function SessionDetailScreen() {
                 <Pressable onPress={() => setEditOrgasm(!editOrgasm)}>
                   <View
                     style={{
-                      width: 40, height: 24, borderRadius: 12,
+                      width: 42, height: 26, borderRadius: 13,
                       backgroundColor: editOrgasm ? colors.accent : colors.inputBorder,
                       justifyContent: "center", paddingHorizontal: 2,
                     }}
                   >
                     <View
                       style={{
-                        width: 20, height: 20, borderRadius: 10,
+                        width: 22, height: 22, borderRadius: 11,
                         backgroundColor: "#FFFFFF",
                         alignSelf: editOrgasm ? "flex-end" : "flex-start",
                       }}
@@ -441,7 +462,7 @@ export default function SessionDetailScreen() {
                   backgroundColor: colors.accent, borderRadius: 12, borderCurve: "continuous",
                   paddingVertical: 14, alignItems: "center", flexDirection: "row",
                   justifyContent: "center", gap: 8, opacity: pressed ? 0.9 : 1,
-                  boxShadow: '0 4px 16px rgba(201, 116, 138, 0.3)',
+                  boxShadow: "0 4px 16px rgba(201, 116, 138, 0.3)",
                 })}
               >
                 <Ionicons name="create-outline" size={18} color="#FFFFFF" />
@@ -449,7 +470,7 @@ export default function SessionDetailScreen() {
               </Pressable>
 
               <Pressable
-                onPress={handleArchive}
+                onPress={showArchiveOptions}
                 style={({ pressed }) => ({
                   backgroundColor: colors.chipInactive, borderRadius: 12, borderCurve: "continuous",
                   paddingVertical: 14, alignItems: "center", flexDirection: "row",
@@ -459,20 +480,18 @@ export default function SessionDetailScreen() {
                 <Ionicons name="archive-outline" size={18} color={colors.text} />
                 <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>Archive Session</Text>
               </Pressable>
-            </>
-          )}
 
-          {!isEditing && (
-            <Pressable
-              onPress={handleDelete}
-              style={({ pressed }) => ({
-                backgroundColor: "transparent", borderRadius: 12, borderCurve: "continuous",
-                paddingVertical: 14, alignItems: "center", borderWidth: 1,
-                borderColor: colors.destructive, opacity: pressed ? 0.9 : 1,
-              })}
-            >
-              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.destructive }}>Delete Session</Text>
-            </Pressable>
+              <Pressable
+                onPress={handleDelete}
+                style={({ pressed }) => ({
+                  backgroundColor: "transparent", borderRadius: 12, borderCurve: "continuous",
+                  paddingVertical: 14, alignItems: "center", borderWidth: 1,
+                  borderColor: colors.destructive, opacity: pressed ? 0.9 : 1,
+                })}
+              >
+                <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.destructive }}>Delete Session</Text>
+              </Pressable>
+            </>
           )}
         </View>
       </ScrollView>

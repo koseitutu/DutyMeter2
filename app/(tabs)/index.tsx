@@ -8,13 +8,14 @@ import { SessionCard } from "@/components/session-card";
 import { getGreeting, isThisWeek, isThisMonth } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/components/theme-provider";
+import { Image } from "expo-image";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useTheme();
   const sessions = useAppStore((s) => s.sessions);
-  const userName = useAppStore((s) => s.preferences.userName || "there");
+  const username = useAppStore((s) => s.settings.username || "there");
 
   const totalSessions = sessions.length;
   const thisWeek = sessions.filter((s) => isThisWeek(s.date)).length;
@@ -56,21 +57,23 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ alignItems: "center" }}>
-          {/* Logo */}
+          {/* App Icon */}
           <View
             style={{
-              width: 52,
-              height: 52,
-              borderRadius: 26,
-              backgroundColor: "rgba(255,255,255,0.15)",
-              justifyContent: "center",
-              alignItems: "center",
-              marginBottom: 8,
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              borderCurve: "continuous",
+              overflow: "hidden",
+              marginBottom: 10,
+              backgroundColor: "rgba(255,255,255,0.1)",
             }}
           >
-            <Text style={{ fontFamily: Fonts.heading, fontSize: 28, color: colors.headerText }}>
-              D
-            </Text>
+            <Image
+              source={require("@/assets/app_icon.png")}
+              style={{ width: 56, height: 56 }}
+              contentFit="cover"
+            />
           </View>
           <Text
             style={{
@@ -89,7 +92,7 @@ export default function HomeScreen() {
               marginTop: 4,
             }}
           >
-            {getGreeting()}, {userName}.
+            {getGreeting()}, {username}.
           </Text>
         </View>
       </View>
@@ -103,9 +106,39 @@ export default function HomeScreen() {
           marginTop: -24,
         }}
       >
-        <StatCard icon="people" label="Total Sessions" value={totalSessions} />
+        <StatCard icon="people" label="Total" value={totalSessions} />
         <StatCard icon="calendar" label="This Week" value={thisWeek} />
         <StatCard icon="calendar-outline" label="This Month" value={thisMonth} />
+      </View>
+
+      {/* Quick Log CTA */}
+      <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
+        <Pressable
+          onPress={() => router.push("/log")}
+          style={({ pressed }) => ({
+            backgroundColor: colors.accent,
+            borderRadius: 14,
+            borderCurve: "continuous",
+            paddingVertical: 16,
+            alignItems: "center",
+            flexDirection: "row",
+            justifyContent: "center",
+            gap: 8,
+            opacity: pressed ? 0.9 : 1,
+            boxShadow: "0 4px 16px rgba(201, 116, 138, 0.3)",
+          })}
+        >
+          <Ionicons name="add-circle" size={22} color="#FFFFFF" />
+          <Text
+            style={{
+              fontFamily: Fonts.semiBold,
+              fontSize: 16,
+              color: "#FFFFFF",
+            }}
+          >
+            Log New Session
+          </Text>
+        </Pressable>
       </View>
 
       {/* Recent Activity */}
@@ -125,10 +158,11 @@ export default function HomeScreen() {
           <View
             style={{
               backgroundColor: colors.surface,
-              borderRadius: 12,
+              borderRadius: 14,
               borderCurve: "continuous",
               padding: 32,
               alignItems: "center",
+              boxShadow: `0 2px 10px ${colors.shadow}`,
             }}
           >
             <Ionicons name="moon-outline" size={36} color={colors.accent} />
@@ -156,36 +190,6 @@ export default function HomeScreen() {
             ))}
           </View>
         )}
-      </View>
-
-      {/* Log CTA button */}
-      <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
-        <Pressable
-          onPress={() => router.push("/log")}
-          style={({ pressed }) => ({
-            backgroundColor: colors.accent,
-            borderRadius: 14,
-            borderCurve: "continuous",
-            paddingVertical: 16,
-            alignItems: "center",
-            flexDirection: "row",
-            justifyContent: "center",
-            gap: 8,
-            opacity: pressed ? 0.9 : 1,
-            boxShadow: '0 4px 16px rgba(201, 116, 138, 0.3)',
-          })}
-        >
-          <Ionicons name="add-circle" size={22} color="#FFFFFF" />
-          <Text
-            style={{
-              fontFamily: Fonts.semiBold,
-              fontSize: 16,
-              color: "#FFFFFF",
-            }}
-          >
-            Log New Session
-          </Text>
-        </Pressable>
       </View>
     </ScrollView>
   );

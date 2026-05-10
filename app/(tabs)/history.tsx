@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
-import { formatSessionDate } from "@/utils/date-helpers";
+import { formatSessionDate, formatDuration } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { Session } from "@/store/types";
 import { useTheme } from "@/components/theme-provider";
@@ -19,12 +19,17 @@ export default function HistoryScreen() {
   const sessions = useAppStore((s) => s.sessions);
   const archivedSessions = useAppStore((s) => s.archivedSessions);
   const deleteSession = useAppStore((s) => s.deleteSession);
+  const deleteSessions = useAppStore((s) => s.deleteSessions);
+  const archiveSession = useAppStore((s) => s.archiveSession);
   const restoreSession = useAppStore((s) => s.restoreSession);
   const deleteArchivedSession = useAppStore((s) => s.deleteArchivedSession);
   const [filter, setFilter] = useState<FilterType>("all");
   const [sort, setSort] = useState<SortType>("newest");
   const [showFilter, setShowFilter] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredSessions = sessions
     .filter((s) => {
@@ -56,12 +61,65 @@ export default function HistoryScreen() {
     [deleteSession]
   );
 
+  const handleLongPress = useCallback(
+    (session: Session) => {
+      if (!multiSelectMode) {
+        setMultiSelectMode(true);
+        setSelectedIds(new Set([session.id]));
+      }
+    },
+    [multiSelectMode]
+  );
+
+  const toggleSelection = useCallback(
+    (id: string) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        if (next.size === 0) {
+          setMultiSelectMode(false);
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const handleBulkDelete = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    Alert.alert(
+      "Delete Selected",
+      `Delete ${selectedIds.size} session${selectedIds.size > 1 ? "s" : ""}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            deleteSessions(Array.from(selectedIds));
+            setSelectedIds(new Set());
+            setMultiSelectMode(false);
+          },
+        },
+      ]
+    );
+  }, [selectedIds, deleteSessions]);
+
+  const handleArchiveFromCard = useCallback(
+    (session: Session, duration: '3months' | '6months' | '1year') => {
+      archiveSession(session.id, duration);
+      setExpandedId(null);
+    },
+    [archiveSession]
+  );
+
   const handleRestoreArchived = useCallback(
     (session: Session) => {
-      Alert.alert("Restore Session", "Restore this session to your active list?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Restore", onPress: () => restoreSession(session.id) },
-      ]);
+      restoreSession(session.id);
     },
     [restoreSession]
   );
@@ -84,11 +142,9 @@ export default function HistoryScreen() {
     [deleteArchivedSession]
   );
 
-  const getPositionsDisplay = (session: Session) => {
-    if (session.positions && session.positions.length > 0) {
-      return session.positions.join(", ");
-    }
-    return (session as any).position || "Unknown";
+  const exitMultiSelect = () => {
+    setMultiSelectMode(false);
+    setSelectedIds(new Set());
   };
 
   return (
@@ -107,6 +163,21 @@ export default function HistoryScreen() {
           justifyContent: "center",
         }}
       >
+        {multiSelectMode && (
+          <Pressable
+            onPress={exitMultiSelect}
+            hitSlop={12}
+            style={{
+              position: "absolute",
+              left: 20,
+              bottom: 28,
+            }}
+          >
+            <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.headerText }}>
+              Cancel
+            </Text>
+          </Pressable>
+        )}
         <Text
           style={{
             fontFamily: Fonts.heading,
@@ -115,25 +186,45 @@ export default function HistoryScreen() {
             textAlign: "center",
           }}
         >
-          Activity History
+          {multiSelectMode ? `${selectedIds.size} Selected` : "Activity History"}
         </Text>
-        <Pressable
-          onPress={() => router.push("/search")}
-          hitSlop={12}
-          style={{
-            position: "absolute",
-            right: 20,
-            bottom: 28,
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: "rgba(255,255,255,0.12)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Ionicons name="search" size={18} color={colors.headerText} />
-        </Pressable>
+        {multiSelectMode ? (
+          <Pressable
+            onPress={handleBulkDelete}
+            hitSlop={12}
+            style={{
+              position: "absolute",
+              right: 20,
+              bottom: 28,
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: "rgba(229, 57, 53, 0.2)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons name="trash" size={18} color="#EF5350" />
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={() => router.push("/search")}
+            hitSlop={12}
+            style={{
+              position: "absolute",
+              right: 20,
+              bottom: 28,
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: "rgba(255,255,255,0.12)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons name="search" size={18} color={colors.headerText} />
+          </Pressable>
+        )}
       </View>
 
       {/* Filter Bar */}
@@ -249,7 +340,7 @@ export default function HistoryScreen() {
           <View
             style={{
               backgroundColor: colors.surface,
-              borderRadius: 12,
+              borderRadius: 14,
               borderCurve: "continuous",
               padding: 40,
               alignItems: "center",
@@ -271,72 +362,174 @@ export default function HistoryScreen() {
             </Text>
           </View>
         ) : (
-          filteredSessions.map((session) => (
-            <Pressable
-              key={session.id}
-              onPress={() => router.push(`/session/${session.id}`)}
-              onLongPress={() => handleDelete(session)}
-            >
-              {({ pressed }) => (
-                <View
-                  style={{
-                    backgroundColor: colors.surface,
-                    borderRadius: 12,
-                    borderCurve: "continuous",
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    borderLeftWidth: 3,
-                    borderLeftColor: colors.accent,
-                    opacity: pressed ? 0.9 : 1,
-                    boxShadow: `0 2px 8px ${colors.shadow}`,
+          filteredSessions.map((session) => {
+            const isSelected = selectedIds.has(session.id);
+            const isExpanded = expandedId === session.id;
+
+            return (
+              <View key={session.id}>
+                <Pressable
+                  onPress={() => {
+                    if (multiSelectMode) {
+                      toggleSelection(session.id);
+                    } else {
+                      setExpandedId(isExpanded ? null : session.id);
+                    }
                   }}
+                  onLongPress={() => handleLongPress(session)}
                 >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text
+                  {({ pressed }) => (
+                    <View
                       style={{
-                        fontFamily: Fonts.semiBold,
-                        fontSize: 14,
-                        color: colors.text,
-                        flex: 1,
+                        backgroundColor: colors.surface,
+                        borderRadius: 12,
+                        borderCurve: "continuous",
+                        paddingVertical: 14,
+                        paddingHorizontal: 16,
+                        borderLeftWidth: 3,
+                        borderLeftColor: isSelected ? colors.destructive : colors.accent,
+                        opacity: pressed ? 0.9 : 1,
+                        boxShadow: `0 2px 8px ${colors.shadow}`,
                       }}
-                      selectable
                     >
-                      {formatSessionDate(session.date, session.time)} · {session.durationMinutes} min
-                    </Text>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      {session.rounds > 1 && (
-                        <View style={{ backgroundColor: colors.chipInactive, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
-                          <Text style={{ fontFamily: Fonts.medium, fontSize: 10, color: colors.textSecondary }}>
-                            ×{session.rounds}
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                        {multiSelectMode && (
+                          <View
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: 11,
+                              borderWidth: 2,
+                              borderColor: isSelected ? colors.accent : colors.inputBorder,
+                              backgroundColor: isSelected ? colors.accent : "transparent",
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                          >
+                            {isSelected && (
+                              <Ionicons name="checkmark" size={14} color="#FFF" />
+                            )}
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                            <Text
+                              style={{
+                                fontFamily: Fonts.semiBold,
+                                fontSize: 14,
+                                color: colors.text,
+                                flex: 1,
+                              }}
+                              selectable
+                            >
+                              {formatSessionDate(session.date, session.time)} · {formatDuration(session.durationMinutes)}
+                            </Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                              {session.rounds > 1 && (
+                                <View style={{ backgroundColor: colors.chipInactive, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
+                                  <Text style={{ fontFamily: Fonts.medium, fontSize: 10, color: colors.textSecondary }}>
+                                    ×{session.rounds}
+                                  </Text>
+                                </View>
+                              )}
+                              <Text
+                                style={{
+                                  fontFamily: Fonts.medium,
+                                  fontSize: 13,
+                                  color: session.orgasm ? colors.success : colors.error,
+                                }}
+                              >
+                                {session.orgasm ? `✓ ${session.orgasmCount}` : "✗"}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text
+                            style={{
+                              fontFamily: Fonts.regular,
+                              fontSize: 13,
+                              color: colors.textSecondary,
+                              marginTop: 3,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {session.positions.join(", ")} · {session.location}
                           </Text>
                         </View>
-                      )}
-                      <Text
-                        style={{
-                          fontFamily: Fonts.medium,
-                          fontSize: 13,
-                          color: session.orgasm ? colors.success : colors.error,
-                        }}
-                      >
-                        {session.orgasm ? `✓ ${session.orgasmCount}` : "✗"}
-                      </Text>
+                      </View>
                     </View>
-                  </View>
-                  <Text
+                  )}
+                </Pressable>
+
+                {/* Expanded card actions */}
+                {isExpanded && !multiSelectMode && (
+                  <View
                     style={{
-                      fontFamily: Fonts.regular,
-                      fontSize: 13,
-                      color: colors.textSecondary,
-                      marginTop: 3,
+                      backgroundColor: colors.surface,
+                      marginTop: -4,
+                      borderBottomLeftRadius: 12,
+                      borderBottomRightRadius: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      gap: 10,
+                      boxShadow: `0 2px 8px ${colors.shadow}`,
                     }}
-                    numberOfLines={1}
                   >
-                    {getPositionsDisplay(session)}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          ))
+                    {/* View/Edit */}
+                    <Pressable
+                      onPress={() => router.push(`/session/${session.id}`)}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <Ionicons name="open-outline" size={16} color={colors.accent} />
+                      <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: colors.accent }}>
+                        View / Edit
+                      </Text>
+                    </Pressable>
+
+                    {/* Archive buttons */}
+                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                      {(["3months", "6months", "1year"] as const).map((dur) => (
+                        <Pressable
+                          key={dur}
+                          onPress={() => handleArchiveFromCard(session, dur)}
+                          style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 7,
+                            backgroundColor: colors.chipInactive,
+                            borderRadius: 16,
+                          }}
+                        >
+                          <Text style={{ fontFamily: Fonts.medium, fontSize: 11, color: colors.textSecondary }}>
+                            Archive {dur === "3months" ? "3mo" : dur === "6months" ? "6mo" : "1yr"}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    {/* Delete */}
+                    <Pressable
+                      onPress={() => handleDelete(session)}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={colors.destructive} />
+                      <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: colors.destructive }}>
+                        Delete
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            );
+          })
         )}
 
         {/* Archive Section */}
@@ -377,7 +570,7 @@ export default function HistoryScreen() {
                       paddingHorizontal: 16,
                       borderLeftWidth: 3,
                       borderLeftColor: colors.textSecondary,
-                      opacity: 0.8,
+                      opacity: 0.85,
                       boxShadow: `0 2px 8px ${colors.shadow}`,
                     }}
                   >
@@ -390,7 +583,7 @@ export default function HistoryScreen() {
                             color: colors.text,
                           }}
                         >
-                          {formatSessionDate(session.date, session.time)} · {session.durationMinutes} min
+                          {formatSessionDate(session.date, session.time)} · {formatDuration(session.durationMinutes)}
                         </Text>
                         <Text
                           style={{
@@ -400,7 +593,7 @@ export default function HistoryScreen() {
                             marginTop: 2,
                           }}
                         >
-                          Archived {session.archiveDuration === "6months" ? "6 months" : "1 year"}
+                          Archived {session.archiveDuration === "3months" ? "3 months" : session.archiveDuration === "6months" ? "6 months" : "1 year"}
                         </Text>
                       </View>
                       <View style={{ flexDirection: "row", gap: 8 }}>

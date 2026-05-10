@@ -1,20 +1,24 @@
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function formatSessionDate(dateStr: string, timeStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number);
+  const [, month, day] = dateStr.split('-').map(Number);
   const monthName = MONTHS[month - 1];
-
-  // Convert time to 12h format
   const [hours, minutes] = timeStr.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
   const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-
   return `${monthName} ${day}, ${displayHour}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
 export function formatDateShort(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   return `${MONTHS[month - 1]} ${day}, ${year}`;
+}
+
+export function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
 export function getGreeting(): string {
@@ -59,4 +63,12 @@ export function getNowISO(): { date: string; time: string } {
   const date = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
   const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   return { date, time };
+}
+
+export function getRelativeDay(dateStr: string): string {
+  const days = getDaysAgo(dateStr);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return formatDateShort(dateStr);
 }

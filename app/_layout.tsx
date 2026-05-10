@@ -6,16 +6,14 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ThemeProvider, useTheme } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 
 SplashScreen.preventAutoHideAsync();
 
 function InnerLayout() {
-  const { isDark } = useTheme();
-
   return (
     <>
-      <StatusBar style={isDark ? "light" : "light"} />
+      <StatusBar style="light" />
       <Stack
         screenOptions={{
           headerShown: false,

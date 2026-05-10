@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Session, Preferences, AppSettings, DarkMode } from './types';
+import type { Session, AppSettings, DarkMode } from './types';
 
 const DEFAULT_POSITIONS = [
   'Missionary',
@@ -12,6 +12,8 @@ const DEFAULT_POSITIONS = [
   'Standing',
   '69',
   'Lotus',
+  'Side by Side',
+  'Prone Bone',
 ];
 
 interface SessionsSlice {
@@ -20,26 +22,23 @@ interface SessionsSlice {
   addSession: (session: Session) => void;
   updateSession: (id: string, updates: Partial<Session>) => void;
   deleteSession: (id: string) => void;
+  deleteSessions: (ids: string[]) => void;
   importSessions: (sessions: Session[]) => void;
-  archiveSession: (id: string, duration: '6months' | '1year') => void;
+  archiveSession: (id: string, duration: '3months' | '6months' | '1year') => void;
   restoreSession: (id: string) => void;
   deleteArchivedSession: (id: string) => void;
 }
 
 interface SettingsSlice {
   settings: AppSettings;
+  setUsername: (username: string) => void;
   setDarkMode: (mode: DarkMode) => void;
   addPosition: (position: string) => void;
   removePosition: (position: string) => void;
   getAllPositions: () => string[];
 }
 
-interface PreferencesSlice {
-  preferences: Preferences;
-  setPreferences: (prefs: Partial<Preferences>) => void;
-}
-
-export type AppStore = SessionsSlice & SettingsSlice & PreferencesSlice;
+export type AppStore = SessionsSlice & SettingsSlice;
 
 export const useAppStore = create<AppStore>()(
   persist(
@@ -47,10 +46,10 @@ export const useAppStore = create<AppStore>()(
       sessions: [],
       archivedSessions: [],
       settings: {
+        username: 'User',
         darkMode: 'light',
         customPositions: DEFAULT_POSITIONS,
       },
-      preferences: { userName: 'Alex' },
 
       addSession: (session: Session) =>
         set((state) => ({
@@ -69,6 +68,11 @@ export const useAppStore = create<AppStore>()(
           sessions: state.sessions.filter((s) => s.id !== id),
         })),
 
+      deleteSessions: (ids: string[]) =>
+        set((state) => ({
+          sessions: state.sessions.filter((s) => !ids.includes(s.id)),
+        })),
+
       importSessions: (sessions: Session[]) =>
         set((state) => {
           const existingIds = new Set(state.sessions.map((s) => s.id));
@@ -79,7 +83,7 @@ export const useAppStore = create<AppStore>()(
           return { sessions: [...state.sessions, ...newSessions] };
         }),
 
-      archiveSession: (id: string, duration: '6months' | '1year') =>
+      archiveSession: (id: string, duration: '3months' | '6months' | '1year') =>
         set((state) => {
           const session = state.sessions.find((s) => s.id === id);
           if (!session) return state;
@@ -114,6 +118,11 @@ export const useAppStore = create<AppStore>()(
           archivedSessions: state.archivedSessions.filter((s) => s.id !== id),
         })),
 
+      setUsername: (username: string) =>
+        set((state) => ({
+          settings: { ...state.settings, username },
+        })),
+
       setDarkMode: (mode: DarkMode) =>
         set((state) => ({
           settings: { ...state.settings, darkMode: mode },
@@ -139,11 +148,6 @@ export const useAppStore = create<AppStore>()(
         })),
 
       getAllPositions: () => get().settings.customPositions,
-
-      setPreferences: (prefs: Partial<Preferences>) =>
-        set((state) => ({
-          preferences: { ...state.preferences, ...prefs },
-        })),
     }),
     {
       name: 'dutymeter-storage',
@@ -152,7 +156,6 @@ export const useAppStore = create<AppStore>()(
         sessions: state.sessions,
         archivedSessions: state.archivedSessions,
         settings: state.settings,
-        preferences: state.preferences,
       }),
     }
   )

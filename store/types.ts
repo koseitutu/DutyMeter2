@@ -15,12 +15,13 @@ export interface Session {
   notes: string;
   createdAt: string; // ISO timestamp
   archivedAt: string | null; // ISO timestamp if archived
-  archiveDuration: '6months' | '1year' | null;
+  archiveDuration: '3months' | '6months' | '1year' | null;
 }
 
 export type DarkMode = 'light' | 'dark' | 'system';
 
 export interface AppSettings {
+  username: string;
   darkMode: DarkMode;
   customPositions: string[];
 }

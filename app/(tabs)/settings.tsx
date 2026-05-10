@@ -13,6 +13,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/components/theme-provider";
 import { DarkMode } from "@/store/types";
+import { Image } from "expo-image";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -20,16 +21,27 @@ export default function SettingsScreen() {
   const settings = useAppStore((s) => s.settings);
   const sessions = useAppStore((s) => s.sessions);
   const archivedSessions = useAppStore((s) => s.archivedSessions);
+  const setUsername = useAppStore((s) => s.setUsername);
   const setDarkMode = useAppStore((s) => s.setDarkMode);
   const addPosition = useAppStore((s) => s.addPosition);
   const removePosition = useAppStore((s) => s.removePosition);
-  const importSessions = useAppStore((s) => s.importSessions);
   const restoreSession = useAppStore((s) => s.restoreSession);
   const deleteArchivedSession = useAppStore((s) => s.deleteArchivedSession);
 
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameInput, setUsernameInput] = useState(settings.username);
   const [newPosition, setNewPosition] = useState("");
   const [showAddPosition, setShowAddPosition] = useState(false);
   const [showArchives, setShowArchives] = useState(false);
+  const [showPositions, setShowPositions] = useState(false);
+
+  const handleSaveUsername = () => {
+    const trimmed = usernameInput.trim();
+    if (trimmed) {
+      setUsername(trimmed);
+    }
+    setEditingUsername(false);
+  };
 
   const handleAddPosition = () => {
     const trimmed = newPosition.trim();
@@ -58,101 +70,42 @@ export default function SettingsScreen() {
   };
 
   const handleExportJSON = () => {
-    const data = JSON.stringify({ sessions, archivedSessions, settings }, null, 2);
+    const dataStr = JSON.stringify({ sessions, archivedSessions, settings }, null, 2);
     Alert.alert(
       "Backup Data",
-      `Your backup contains ${sessions.length} active + ${archivedSessions.length} archived sessions.\n\nCopy the data below:\n\n${data.substring(0, 200)}...`,
+      `Your backup contains ${sessions.length} active + ${archivedSessions.length} archived sessions (${dataStr.length} bytes).\n\nIn production, this would save via share sheet or file system.`,
       [{ text: "OK" }]
     );
   };
 
   const handleImportJSON = () => {
-    Alert.prompt?.(
+    Alert.alert(
       "Import Backup",
-      "Paste your JSON backup data:",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Import",
-          onPress: (text: string | undefined) => {
-            if (!text) return;
-            try {
-              const data = JSON.parse(text);
-              if (data.sessions && Array.isArray(data.sessions)) {
-                importSessions(data.sessions);
-                Alert.alert("Success", `Imported ${data.sessions.length} sessions.`);
-              } else {
-                Alert.alert("Error", "Invalid backup format.");
-              }
-            } catch {
-              Alert.alert("Error", "Could not parse the backup data.");
-            }
-          },
-        },
-      ],
-      "plain-text"
-    ) ?? Alert.alert("Import", "JSON import is available on iOS. On other platforms, use the app's data sync feature.");
+      "In production, this would open the document picker to select a JSON file. For now, paste data via the prompt on iOS.",
+      [{ text: "OK" }]
+    );
   };
 
   const handleExportCSV = () => {
     const header = "id,date,time,durationMinutes,rounds,location,positions,orgasm,orgasmCount,notes";
     const rows = sessions.map((s) => {
-      const positions = s.positions ? s.positions.join(";") : (s as any).position || "";
-      return `"${s.id}","${s.date}","${s.time}",${s.durationMinutes},${s.rounds ?? 1},"${s.location}","${positions}",${s.orgasm},${s.orgasmCount},"${(s.notes || "").replace(/"/g, '""')}"`;
+      const posStr = s.positions ? s.positions.join(";") : "";
+      return `"${s.id}","${s.date}","${s.time}",${s.durationMinutes},${s.rounds},"${s.location}","${posStr}",${s.orgasm},${s.orgasmCount},"${(s.notes || "").replace(/"/g, '""')}"`;
     });
-    const csv = [header, ...rows].join("\n");
+    const csvContent = [header, ...rows].join("\n");
     Alert.alert(
       "Export CSV",
-      `Exported ${sessions.length} sessions as CSV.\n\n${csv.substring(0, 200)}...`,
+      `Exported ${sessions.length} sessions as CSV (${csvContent.length} chars).\n\nIn production, this would save via share sheet or DocumentPicker.`,
       [{ text: "OK" }]
     );
   };
 
   const handleImportCSV = () => {
-    Alert.prompt?.(
+    Alert.alert(
       "Import CSV",
-      "Paste your CSV data (including header row):",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Import",
-          onPress: (text: string | undefined) => {
-            if (!text) return;
-            try {
-              const lines = text.trim().split("\n");
-              if (lines.length < 2) {
-                Alert.alert("Error", "CSV must have a header row and at least one data row.");
-                return;
-              }
-              const imported = lines.slice(1).map((line) => {
-                const cols = line.match(/(".*?"|[^,]*)/g) || [];
-                const clean = cols.map((c) => c.replace(/^"|"$/g, "").replace(/""/g, '"'));
-                return {
-                  id: clean[0] || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                  date: clean[1] || "",
-                  time: clean[2] || "00:00",
-                  durationMinutes: parseInt(clean[3]) || 30,
-                  rounds: parseInt(clean[4]) || 1,
-                  location: clean[5] || "",
-                  positions: clean[6] ? clean[6].split(";") : ["Unknown"],
-                  orgasm: clean[7] === "true",
-                  orgasmCount: parseInt(clean[8]) || 0,
-                  notes: clean[9] || "",
-                  createdAt: new Date().toISOString(),
-                  archivedAt: null,
-                  archiveDuration: null,
-                } as any;
-              });
-              importSessions(imported);
-              Alert.alert("Success", `Imported ${imported.length} sessions from CSV.`);
-            } catch {
-              Alert.alert("Error", "Could not parse the CSV data.");
-            }
-          },
-        },
-      ],
-      "plain-text"
-    ) ?? Alert.alert("Import", "CSV import is available on iOS. On other platforms, use the JSON backup feature.");
+      "In production, this would open the document picker to select a CSV file from your device.",
+      [{ text: "OK" }]
+    );
   };
 
   const handleRestoreArchived = (id: string) => {
@@ -195,6 +148,61 @@ export default function SettingsScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: 40 }}
       >
+        {/* Username Section */}
+        <View>
+          <Text style={sectionTitle(colors)}>PROFILE</Text>
+          <View style={sectionCard(colors)}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View
+                  style={{
+                    width: 40, height: 40, borderRadius: 20,
+                    backgroundColor: colors.chipInactive,
+                    justifyContent: "center", alignItems: "center",
+                  }}
+                >
+                  <Ionicons name="person" size={20} color={colors.accent} />
+                </View>
+                <View>
+                  <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>
+                    Username
+                  </Text>
+                  {editingUsername ? (
+                    <TextInput
+                      style={{
+                        fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text,
+                        borderBottomWidth: 1, borderBottomColor: colors.accent,
+                        paddingVertical: 2, minWidth: 120,
+                      }}
+                      value={usernameInput}
+                      onChangeText={setUsernameInput}
+                      autoFocus
+                      onSubmitEditing={handleSaveUsername}
+                      onBlur={handleSaveUsername}
+                      returnKeyType="done"
+                    />
+                  ) : (
+                    <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                      {settings.username}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              {!editingUsername && (
+                <Pressable
+                  onPress={() => {
+                    setUsernameInput(settings.username);
+                    setEditingUsername(true);
+                  }}
+                  hitSlop={8}
+                >
+                  <Ionicons name="create-outline" size={20} color={colors.accent} />
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </View>
+
         {/* Appearance Section */}
         <View>
           <Text style={sectionTitle(colors)}>APPEARANCE</Text>
@@ -246,82 +254,100 @@ export default function SettingsScreen() {
         <View>
           <Text style={sectionTitle(colors)}>MANAGE POSITIONS</Text>
           <View style={sectionCard(colors)}>
-            <View style={{ gap: 8 }}>
-              {settings.customPositions.map((pos) => (
-                <View
-                  key={pos}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingVertical: 10,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.separator,
-                  }}
-                >
-                  <Text style={{ fontFamily: Fonts.regular, fontSize: 14, color: colors.text }}>
-                    {pos}
-                  </Text>
-                  <Pressable onPress={() => handleRemovePosition(pos)} hitSlop={8}>
-                    <Ionicons name="close-circle" size={20} color={colors.destructive} />
-                  </Pressable>
-                </View>
-              ))}
-            </View>
+            <Pressable
+              onPress={() => setShowPositions(!showPositions)}
+              style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+            >
+              <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                Positions ({settings.customPositions.length})
+              </Text>
+              <Ionicons
+                name={showPositions ? "chevron-up" : "chevron-down"}
+                size={18}
+                color={colors.textSecondary}
+              />
+            </Pressable>
 
-            {showAddPosition ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
-                <TextInput
-                  style={{
-                    flex: 1,
-                    fontFamily: Fonts.regular,
-                    fontSize: 14,
-                    color: colors.text,
-                    borderWidth: 1,
-                    borderColor: colors.inputBorder,
-                    borderRadius: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    backgroundColor: colors.inputBg,
-                  }}
-                  value={newPosition}
-                  onChangeText={setNewPosition}
-                  placeholder="New position name"
-                  placeholderTextColor={colors.textSecondary}
-                  autoFocus
-                  onSubmitEditing={handleAddPosition}
-                />
-                <Pressable
-                  onPress={handleAddPosition}
-                  style={{
-                    backgroundColor: colors.accent,
-                    borderRadius: 8,
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                  }}
-                >
-                  <Text style={{ fontFamily: Fonts.semiBold, fontSize: 13, color: "#FFFFFF" }}>Add</Text>
-                </Pressable>
-                <Pressable onPress={() => { setShowAddPosition(false); setNewPosition(""); }}>
-                  <Ionicons name="close" size={22} color={colors.textSecondary} />
-                </Pressable>
+            {showPositions && (
+              <View style={{ marginTop: 12 }}>
+                <View style={{ gap: 4 }}>
+                  {settings.customPositions.map((pos) => (
+                    <View
+                      key={pos}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        paddingVertical: 10,
+                        borderBottomWidth: 1,
+                        borderBottomColor: colors.separator,
+                      }}
+                    >
+                      <Text style={{ fontFamily: Fonts.regular, fontSize: 14, color: colors.text }}>
+                        {pos}
+                      </Text>
+                      <Pressable onPress={() => handleRemovePosition(pos)} hitSlop={8}>
+                        <Ionicons name="close-circle" size={20} color={colors.destructive} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+
+                {showAddPosition ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        fontFamily: Fonts.regular,
+                        fontSize: 14,
+                        color: colors.text,
+                        borderWidth: 1,
+                        borderColor: colors.inputBorder,
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        backgroundColor: colors.inputBg,
+                      }}
+                      value={newPosition}
+                      onChangeText={setNewPosition}
+                      placeholder="New position name"
+                      placeholderTextColor={colors.textSecondary}
+                      autoFocus
+                      onSubmitEditing={handleAddPosition}
+                    />
+                    <Pressable
+                      onPress={handleAddPosition}
+                      style={{
+                        backgroundColor: colors.accent,
+                        borderRadius: 8,
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                      }}
+                    >
+                      <Text style={{ fontFamily: Fonts.semiBold, fontSize: 13, color: "#FFFFFF" }}>Add</Text>
+                    </Pressable>
+                    <Pressable onPress={() => { setShowAddPosition(false); setNewPosition(""); }}>
+                      <Ionicons name="close" size={22} color={colors.textSecondary} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={() => setShowAddPosition(true)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      marginTop: 12,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
+                    <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.accent }}>
+                      Add New Position
+                    </Text>
+                  </Pressable>
+                )}
               </View>
-            ) : (
-              <Pressable
-                onPress={() => setShowAddPosition(true)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 8,
-                  marginTop: 12,
-                  paddingVertical: 10,
-                }}
-              >
-                <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
-                <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.accent }}>
-                  Add New Position
-                </Text>
-              </Pressable>
             )}
           </View>
         </View>
@@ -330,91 +356,38 @@ export default function SettingsScreen() {
         <View>
           <Text style={sectionTitle(colors)}>BACKUP & EXPORT</Text>
           <View style={sectionCard(colors)}>
-            <Pressable
+            <SettingsRow
+              icon="cloud-upload-outline"
+              title="Backup (JSON)"
+              subtitle="Export all data as JSON"
+              colors={colors}
               onPress={handleExportJSON}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                paddingVertical: 14,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.separator,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.chipInactive, justifyContent: "center", alignItems: "center" }}>
-                <Ionicons name="cloud-upload-outline" size={18} color={colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.text }}>Backup (JSON)</Text>
-                <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Export all data as JSON</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-            </Pressable>
-
-            <Pressable
+            />
+            <View style={{ height: 1, backgroundColor: colors.separator }} />
+            <SettingsRow
+              icon="cloud-download-outline"
+              title="Restore (JSON)"
+              subtitle="Import data from JSON backup"
+              colors={colors}
               onPress={handleImportJSON}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                paddingVertical: 14,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.separator,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.chipInactive, justifyContent: "center", alignItems: "center" }}>
-                <Ionicons name="cloud-download-outline" size={18} color={colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.text }}>Restore (JSON)</Text>
-                <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Import data from JSON backup</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-            </Pressable>
-
-            <Pressable
+            />
+            <View style={{ height: 1, backgroundColor: colors.separator }} />
+            <SettingsRow
+              icon="download-outline"
+              title="Export CSV"
+              subtitle="Export sessions as CSV file"
+              colors={colors}
               onPress={handleExportCSV}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                paddingVertical: 14,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.separator,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.chipInactive, justifyContent: "center", alignItems: "center" }}>
-                <Ionicons name="download-outline" size={18} color={colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.text }}>Export CSV</Text>
-                <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Export sessions as CSV file</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-            </Pressable>
-
-            <Pressable
+            />
+            <View style={{ height: 1, backgroundColor: colors.separator }} />
+            <SettingsRow
+              icon="push-outline"
+              title="Import CSV"
+              subtitle="Import sessions from CSV file"
+              colors={colors}
               onPress={handleImportCSV}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                paddingVertical: 14,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.chipInactive, justifyContent: "center", alignItems: "center" }}>
-                <Ionicons name="push-outline" size={18} color={colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.text }}>Import CSV</Text>
-                <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Import sessions from CSV file</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-            </Pressable>
+              last
+            />
           </View>
         </View>
 
@@ -468,7 +441,7 @@ export default function SettingsScreen() {
                         {session.date} · {session.durationMinutes}min
                       </Text>
                       <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
-                        {session.archiveDuration === "6months" ? "6 month" : "1 year"} archive
+                        {session.archiveDuration === "3months" ? "3 month" : session.archiveDuration === "6months" ? "6 month" : "1 year"} archive
                       </Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 6 }}>
@@ -521,16 +494,19 @@ export default function SettingsScreen() {
             <View style={{ alignItems: "center", paddingVertical: 16 }}>
               <View
                 style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: colors.chipInactive,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  marginBottom: 8,
+                  width: 56,
+                  height: 56,
+                  borderRadius: 14,
+                  borderCurve: "continuous",
+                  overflow: "hidden",
+                  marginBottom: 10,
                 }}
               >
-                <Text style={{ fontFamily: Fonts.heading, fontSize: 24, color: colors.accent }}>D</Text>
+                <Image
+                  source={require("@/assets/app_icon.png")}
+                  style={{ width: 56, height: 56 }}
+                  contentFit="cover"
+                />
               </View>
               <Text style={{ fontFamily: Fonts.heading, fontSize: 20, color: colors.text }}>DutyMeter</Text>
               <Text style={{ fontFamily: Fonts.regular, fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>
@@ -543,7 +519,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Data info */}
+        {/* Data Info */}
         <View
           style={{
             backgroundColor: colors.surface,
@@ -562,6 +538,44 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+function SettingsRow({
+  icon,
+  title,
+  subtitle,
+  colors,
+  onPress,
+  last = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  colors: ReturnType<typeof useTheme>["colors"];
+  onPress: () => void;
+  last?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 14,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.chipInactive, justifyContent: "center", alignItems: "center" }}>
+        <Ionicons name={icon} size={18} color={colors.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.text }}>{title}</Text>
+        <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>{subtitle}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+    </Pressable>
   );
 }
 

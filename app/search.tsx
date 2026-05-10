@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
-import { formatSessionDate } from "@/utils/date-helpers";
+import { formatSessionDate, formatDuration } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/components/theme-provider";
 
@@ -19,10 +19,7 @@ export default function SearchScreen() {
     if (!query.trim()) return [];
     const lower = query.toLowerCase().trim();
     return sessions.filter((s) => {
-      // Search positions (array or legacy single)
-      const positionsMatch = s.positions
-        ? s.positions.some((p) => p.toLowerCase().includes(lower))
-        : (s as any).position?.toLowerCase().includes(lower);
+      const positionsMatch = s.positions.some((p) => p.toLowerCase().includes(lower));
       return (
         positionsMatch ||
         s.location.toLowerCase().includes(lower) ||
@@ -30,13 +27,6 @@ export default function SearchScreen() {
       );
     });
   }, [sessions, query]);
-
-  const getPositionsDisplay = (session: typeof sessions[0]) => {
-    if (session.positions && session.positions.length > 0) {
-      return session.positions.join(", ");
-    }
-    return (session as any).position || "Unknown";
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -157,15 +147,27 @@ export default function SearchScreen() {
                       boxShadow: `0 2px 8px ${colors.shadow}`,
                     }}
                   >
-                    <Text
-                      style={{
-                        fontFamily: Fonts.semiBold,
-                        fontSize: 14,
-                        color: colors.text,
-                      }}
-                    >
-                      {formatSessionDate(session.date, session.time)} · {session.durationMinutes} min
-                    </Text>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <Text
+                        style={{
+                          fontFamily: Fonts.semiBold,
+                          fontSize: 14,
+                          color: colors.text,
+                          flex: 1,
+                        }}
+                      >
+                        {formatSessionDate(session.date, session.time)} · {formatDuration(session.durationMinutes)}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: Fonts.medium,
+                          fontSize: 12,
+                          color: session.orgasm ? colors.success : colors.error,
+                        }}
+                      >
+                        {session.orgasm ? `✓ ${session.orgasmCount}` : "✗"}
+                      </Text>
+                    </View>
                     <Text
                       style={{
                         fontFamily: Fonts.regular,
@@ -173,8 +175,9 @@ export default function SearchScreen() {
                         color: colors.textSecondary,
                         marginTop: 3,
                       }}
+                      numberOfLines={1}
                     >
-                      {getPositionsDisplay(session)} · {session.location}
+                      {session.positions.join(", ")} · {session.location}
                     </Text>
                     {session.notes ? (
                       <Text

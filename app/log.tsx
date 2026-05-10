@@ -27,8 +27,8 @@ export default function LogSessionScreen() {
   const positions = useAppStore((s) => s.settings.customPositions);
 
   const now = getNowISO();
-  const [date] = useState(now.date);
-  const [time] = useState(now.time);
+  const [date, setDate] = useState(now.date);
+  const [time, setTime] = useState(now.time);
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [rounds, setRounds] = useState(1);
   const [location, setLocation] = useState("");
@@ -39,6 +39,7 @@ export default function LogSessionScreen() {
   const [showLocationPresets, setShowLocationPresets] = useState(false);
   const [customPosition, setCustomPosition] = useState("");
   const [showCustomPosition, setShowCustomPosition] = useState(false);
+  const [showDateEdit, setShowDateEdit] = useState(false);
 
   const togglePosition = (pos: string) => {
     setSelectedPositions((prev) =>
@@ -137,7 +138,10 @@ export default function LogSessionScreen() {
           {/* Date & Time */}
           <View>
             <Text style={labelStyle(colors)}>Date & Time</Text>
-            <View style={inputContainerStyle(colors)}>
+            <Pressable
+              onPress={() => setShowDateEdit(!showDateEdit)}
+              style={inputContainerStyle(colors)}
+            >
               <Text
                 style={{
                   fontFamily: Fonts.regular,
@@ -149,7 +153,43 @@ export default function LogSessionScreen() {
                 {formatDateForDisplay(date, time)}
               </Text>
               <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-            </View>
+            </Pressable>
+            {showDateEdit && (
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>
+                    Date (YYYY-MM-DD)
+                  </Text>
+                  <TextInput
+                    style={{
+                      fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                      borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
+                      paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.inputBg,
+                    }}
+                    value={date}
+                    onChangeText={setDate}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>
+                    Time (HH:MM)
+                  </Text>
+                  <TextInput
+                    style={{
+                      fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                      borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
+                      paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.inputBg,
+                    }}
+                    value={time}
+                    onChangeText={setTime}
+                    placeholder="HH:MM"
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Duration */}
@@ -166,13 +206,15 @@ export default function LogSessionScreen() {
                 <Text
                   style={{
                     fontFamily: Fonts.semiBold,
-                    fontSize: 18,
+                    fontSize: 20,
                     color: colors.accent,
                     fontVariant: ["tabular-nums"],
                   }}
                   selectable
                 >
-                  {durationMinutes} min
+                  {durationMinutes < 60
+                    ? `${durationMinutes} min`
+                    : `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`}
                 </Text>
               </View>
               <Pressable
@@ -198,7 +240,7 @@ export default function LogSessionScreen() {
                 <Text
                   style={{
                     fontFamily: Fonts.semiBold,
-                    fontSize: 18,
+                    fontSize: 20,
                     color: colors.accent,
                     fontVariant: ["tabular-nums"],
                   }}
@@ -245,11 +287,15 @@ export default function LogSessionScreen() {
                     style={{
                       paddingHorizontal: 14,
                       paddingVertical: 8,
-                      backgroundColor: colors.chipInactive,
+                      backgroundColor: location === loc ? colors.chipActive : colors.chipInactive,
                       borderRadius: 20,
                     }}
                   >
-                    <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: colors.chipTextInactive }}>
+                    <Text style={{
+                      fontFamily: Fonts.medium,
+                      fontSize: 13,
+                      color: location === loc ? colors.chipTextActive : colors.chipTextInactive,
+                    }}>
                       {loc}
                     </Text>
                   </Pressable>
@@ -330,6 +376,7 @@ export default function LogSessionScreen() {
                   placeholder="Enter custom position..."
                   placeholderTextColor={colors.textSecondary}
                   onSubmitEditing={handleAddCustomPosition}
+                  autoFocus
                 />
                 <Pressable
                   onPress={handleAddCustomPosition}
@@ -401,7 +448,7 @@ export default function LogSessionScreen() {
                       borderRadius: 12,
                       backgroundColor: "#FFFFFF",
                       alignSelf: orgasm ? "flex-end" : "flex-start",
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                     }}
                   />
                 </View>
@@ -424,10 +471,10 @@ export default function LogSessionScreen() {
                   <Text
                     style={{
                       fontFamily: Fonts.bold,
-                      fontSize: 18,
+                      fontSize: 20,
                       color: colors.text,
                       fontVariant: ["tabular-nums"],
-                      minWidth: 20,
+                      minWidth: 24,
                       textAlign: "center",
                     }}
                     selectable
@@ -469,7 +516,7 @@ export default function LogSessionScreen() {
               alignItems: "center",
               opacity: pressed ? 0.9 : 1,
               marginTop: 8,
-              boxShadow: '0 4px 16px rgba(201, 116, 138, 0.3)',
+              boxShadow: "0 4px 16px rgba(201, 116, 138, 0.3)",
             })}
           >
             <Text style={{ fontFamily: Fonts.semiBold, fontSize: 16, color: "#FFFFFF" }}>
@@ -507,9 +554,9 @@ function inputContainerStyle(colors: ReturnType<typeof import("@/components/them
 
 function stepperBtnStyle(colors: ReturnType<typeof import("@/components/theme-provider").useTheme>["colors"]) {
   return {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.chipInactive,
     justifyContent: "center" as const,
     alignItems: "center" as const,

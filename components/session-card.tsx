@@ -1,7 +1,7 @@
 import { View, Text, Pressable } from 'react-native';
 import { Fonts } from '@/constants/Typography';
 import { Session } from '@/store/types';
-import { formatSessionDate } from '@/utils/date-helpers';
+import { formatSessionDate, formatDuration } from '@/utils/date-helpers';
 import { useTheme } from '@/components/theme-provider';
 
 interface SessionCardProps {
@@ -13,11 +13,6 @@ interface SessionCardProps {
 export function SessionCard({ session, onPress, compact = false }: SessionCardProps) {
   const { colors } = useTheme();
   const dateStr = formatSessionDate(session.date, session.time);
-
-  // Support both old single-position and new multi-position format
-  const positionsDisplay = session.positions
-    ? session.positions.join(', ')
-    : (session as any).position || 'Unknown';
 
   return (
     <Pressable onPress={onPress}>
@@ -45,7 +40,7 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
                 }}
                 selectable
               >
-                {dateStr} · {session.durationMinutes} min
+                {dateStr} · {formatDuration(session.durationMinutes)}
               </Text>
               <Text
                 style={{
@@ -56,12 +51,19 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
                 }}
                 numberOfLines={1}
               >
-                {positionsDisplay}
+                {session.positions.join(', ')}
                 {session.rounds > 1 ? ` · ${session.rounds} rounds` : ''}
               </Text>
             </View>
             {!compact && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {session.rounds > 1 && (
+                  <View style={{ backgroundColor: colors.chipInactive, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
+                    <Text style={{ fontFamily: Fonts.medium, fontSize: 10, color: colors.textSecondary }}>
+                      ×{session.rounds}
+                    </Text>
+                  </View>
+                )}
                 <Text
                   style={{
                     fontFamily: Fonts.medium,
@@ -69,8 +71,7 @@ export function SessionCard({ session, onPress, compact = false }: SessionCardPr
                     color: session.orgasm ? colors.success : colors.error,
                   }}
                 >
-                  {session.orgasm ? '✓' : '✗'}
-                  {session.orgasm && ` (${session.orgasmCount})`}
+                  {session.orgasm ? `✓ ${session.orgasmCount}` : '✗'}
                 </Text>
               </View>
             )}
