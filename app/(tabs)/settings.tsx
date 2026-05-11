@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ export default function SettingsScreen() {
   const removePosition = useAppStore((s) => s.removePosition);
   const restoreSession = useAppStore((s) => s.restoreSession);
   const deleteArchivedSession = useAppStore((s) => s.deleteArchivedSession);
+  const bulkArchiveSessions = useAppStore((s) => s.bulkArchiveSessions);
 
   const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState(settings.username);
@@ -107,6 +108,31 @@ export default function SettingsScreen() {
       [{ text: "OK" }]
     );
   };
+
+  const handleBulkArchive = useCallback(
+    (period: '3months' | '6months' | '1year') => {
+      const periodLabel = period === '3months' ? '3 months' : period === '6months' ? '6 months' : '1 year';
+      Alert.alert(
+        "Bulk Archive",
+        `Archive all sessions older than ${periodLabel}?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Archive",
+            onPress: () => {
+              const count = bulkArchiveSessions(period);
+              if (count > 0) {
+                Alert.alert("Done", `${count} session${count > 1 ? "s" : ""} archived.`);
+              } else {
+                Alert.alert("No Sessions", `No sessions older than ${periodLabel} to archive.`);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [bulkArchiveSessions]
+  );
 
   const handleRestoreArchived = (id: string) => {
     restoreSession(id);
@@ -388,6 +414,48 @@ export default function SettingsScreen() {
               onPress={handleImportCSV}
               last
             />
+          </View>
+        </View>
+
+        {/* Bulk Archive Section */}
+        <View>
+          <Text style={sectionTitle(colors)}>BULK ARCHIVE</Text>
+          <View style={sectionCard(colors)}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <Ionicons name="time-outline" size={20} color={colors.accent} />
+              <View>
+                <Text style={{ fontFamily: Fonts.medium, fontSize: 14, color: colors.text }}>
+                  Archive Sessions Older Than...
+                </Text>
+                <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>
+                  Bulk archive by time period
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {([
+                ["3months", "3 Months"],
+                ["6months", "6 Months"],
+                ["1year", "1 Year"],
+              ] as const).map(([period, label]) => (
+                <Pressable
+                  key={period}
+                  onPress={() => handleBulkArchive(period)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    paddingVertical: 12,
+                    backgroundColor: pressed ? colors.chipActive : colors.chipInactive,
+                    borderRadius: 10,
+                    borderCurve: "continuous",
+                    alignItems: "center",
+                  })}
+                >
+                  <Text style={{ fontFamily: Fonts.medium, fontSize: 12, color: colors.chipTextInactive }}>
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         </View>
 

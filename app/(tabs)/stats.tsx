@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
-import { View, Text, ScrollView, Pressable, TextInput } from "react-native";
+import { View, Text, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Fonts } from "@/constants/Typography";
 import { useAppStore } from "@/store/useAppStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/components/theme-provider";
+import { CalendarPicker } from "@/components/calendar-picker";
 
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
@@ -13,6 +14,8 @@ export default function StatsScreen() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
 
   const filteredSessions = useMemo(() => {
     if (!startDate && !endDate) return sessions;
@@ -222,41 +225,67 @@ export default function StatsScreen() {
                   <Text style={{ fontFamily: Fonts.medium, fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>
                     FROM
                   </Text>
-                  <TextInput
+                  <Pressable
+                    onPress={() => setShowStartCalendar(true)}
                     style={{
-                      fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                      flexDirection: "row", alignItems: "center", gap: 8,
                       borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
-                      paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.inputBg,
+                      paddingHorizontal: 10, paddingVertical: 12, backgroundColor: colors.inputBg,
                     }}
-                    value={startDate}
-                    onChangeText={setStartDate}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.textSecondary}
-                    keyboardType="numbers-and-punctuation"
-                  />
+                  >
+                    <Ionicons name="calendar-outline" size={16} color={colors.accent} />
+                    <Text
+                      style={{
+                        fontFamily: Fonts.regular, fontSize: 14,
+                        color: startDate ? colors.text : colors.textSecondary,
+                      }}
+                    >
+                      {startDate || "Select start"}
+                    </Text>
+                  </Pressable>
                 </View>
                 <Ionicons name="arrow-forward" size={16} color={colors.textSecondary} style={{ marginTop: 16 }} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontFamily: Fonts.medium, fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>
                     TO
                   </Text>
-                  <TextInput
+                  <Pressable
+                    onPress={() => setShowEndCalendar(true)}
                     style={{
-                      fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                      flexDirection: "row", alignItems: "center", gap: 8,
                       borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
-                      paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.inputBg,
+                      paddingHorizontal: 10, paddingVertical: 12, backgroundColor: colors.inputBg,
                     }}
-                    value={endDate}
-                    onChangeText={setEndDate}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.textSecondary}
-                    keyboardType="numbers-and-punctuation"
-                  />
+                  >
+                    <Ionicons name="calendar-outline" size={16} color={colors.accent} />
+                    <Text
+                      style={{
+                        fontFamily: Fonts.regular, fontSize: 14,
+                        color: endDate ? colors.text : colors.textSecondary,
+                      }}
+                    >
+                      {endDate || "Select end"}
+                    </Text>
+                  </Pressable>
                 </View>
               </View>
               <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary }}>
-                Enter dates in YYYY-MM-DD format. Leave empty for no limit.
+                Tap a date field to open the calendar. Leave empty for no limit.
               </Text>
+              <CalendarPicker
+                visible={showStartCalendar}
+                onClose={() => setShowStartCalendar(false)}
+                onSelectDate={setStartDate}
+                selectedDate={startDate}
+                title="Start Date"
+              />
+              <CalendarPicker
+                visible={showEndCalendar}
+                onClose={() => setShowEndCalendar(false)}
+                onSelectDate={setEndDate}
+                selectedDate={endDate}
+                title="End Date"
+              />
             </View>
           )}
         </View>

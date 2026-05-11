@@ -16,6 +16,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { getNowISO } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/components/theme-provider";
+import { CalendarPicker, TimePicker } from "@/components/calendar-picker";
 
 const LOCATIONS = ["Home", "Partner's Place", "Hotel", "Other"];
 
@@ -39,7 +40,8 @@ export default function LogSessionScreen() {
   const [showLocationPresets, setShowLocationPresets] = useState(false);
   const [customPosition, setCustomPosition] = useState("");
   const [showCustomPosition, setShowCustomPosition] = useState(false);
-  const [showDateEdit, setShowDateEdit] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const togglePosition = (pos: string) => {
     setSelectedPositions((prev) =>
@@ -138,58 +140,54 @@ export default function LogSessionScreen() {
           {/* Date & Time */}
           <View>
             <Text style={labelStyle(colors)}>Date & Time</Text>
-            <Pressable
-              onPress={() => setShowDateEdit(!showDateEdit)}
-              style={inputContainerStyle(colors)}
-            >
-              <Text
-                style={{
-                  fontFamily: Fonts.regular,
-                  fontSize: 15,
-                  color: colors.text,
-                  flex: 1,
-                }}
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={() => setShowCalendar(true)}
+                style={[inputContainerStyle(colors), { flex: 1 }]}
               >
-                {formatDateForDisplay(date, time)}
-              </Text>
-              <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-            </Pressable>
-            {showDateEdit && (
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>
-                    Date (YYYY-MM-DD)
-                  </Text>
-                  <TextInput
-                    style={{
-                      fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
-                      borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
-                      paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.inputBg,
-                    }}
-                    value={date}
-                    onChangeText={setDate}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.textSecondary}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: Fonts.regular, fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>
-                    Time (HH:MM)
-                  </Text>
-                  <TextInput
-                    style={{
-                      fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
-                      borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
-                      paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.inputBg,
-                    }}
-                    value={time}
-                    onChangeText={setTime}
-                    placeholder="HH:MM"
-                    placeholderTextColor={colors.textSecondary}
-                  />
-                </View>
-              </View>
-            )}
+                <Ionicons name="calendar" size={18} color={colors.accent} />
+                <Text
+                  style={{
+                    fontFamily: Fonts.regular,
+                    fontSize: 15,
+                    color: colors.text,
+                    flex: 1,
+                  }}
+                >
+                  {formatDateForDisplay(date, time).split(",")[0]}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
+              </Pressable>
+              <Pressable
+                onPress={() => setShowTimePicker(true)}
+                style={[inputContainerStyle(colors), { minWidth: 120 }]}
+              >
+                <Ionicons name="time" size={18} color={colors.accent} />
+                <Text
+                  style={{
+                    fontFamily: Fonts.regular,
+                    fontSize: 15,
+                    color: colors.text,
+                  }}
+                >
+                  {formatDateForDisplay(date, time).split(", ")[1]}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            <CalendarPicker
+              visible={showCalendar}
+              onClose={() => setShowCalendar(false)}
+              onSelectDate={setDate}
+              selectedDate={date}
+              title="Session Date"
+            />
+            <TimePicker
+              visible={showTimePicker}
+              onClose={() => setShowTimePicker(false)}
+              onSelectTime={setTime}
+              selectedTime={time}
+            />
           </View>
 
           {/* Duration */}

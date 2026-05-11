@@ -25,6 +25,7 @@ interface SessionsSlice {
   deleteSessions: (ids: string[]) => void;
   importSessions: (sessions: Session[]) => void;
   archiveSession: (id: string, duration: '3months' | '6months' | '1year') => void;
+  bulkArchiveSessions: (olderThan: '3months' | '6months' | '1year') => number;
   restoreSession: (id: string) => void;
   deleteArchivedSession: (id: string) => void;
 }
@@ -97,6 +98,40 @@ export const useAppStore = create<AppStore>()(
             archivedSessions: [archived, ...state.archivedSessions],
           };
         }),
+
+      bulkArchiveSessions: (olderThan: '3months' | '6months' | '1year') => {
+        const now = new Date();
+        let cutoffDate: Date;
+        if (olderThan === '3months') {
+          cutoffDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+        } else if (olderThan === '6months') {
+          cutoffDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+        } else {
+          cutoffDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        }
+        const cutoffStr = cutoffDate.toISOString().split('T')[0];
+
+        let archivedCount = 0;
+        set((state) => {
+          const toArchive = state.sessions.filter((s) => s.date < cutoffStr);
+          const remaining = state.sessions.filter((s) => s.date >= cutoffStr);
+          archivedCount = toArchive.length;
+
+          if (toArchive.length === 0) return state;
+
+          const newArchived = toArchive.map((s) => ({
+            ...s,
+            archivedAt: new Date().toISOString(),
+            archiveDuration: olderThan,
+          }));
+
+          return {
+            sessions: remaining,
+            archivedSessions: [...newArchived, ...state.archivedSessions],
+          };
+        });
+        return archivedCount;
+      },
 
       restoreSession: (id: string) =>
         set((state) => {

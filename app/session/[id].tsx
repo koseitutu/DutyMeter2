@@ -14,6 +14,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { formatDateShort, formatDuration } from "@/utils/date-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/components/theme-provider";
+import { CalendarPicker, TimePicker } from "@/components/calendar-picker";
 
 export default function SessionDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -28,6 +29,8 @@ export default function SessionDetailScreen() {
 
   const session = sessions.find((s) => s.id === id);
   const [isEditing, setIsEditing] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // Edit state
   const [editDate, setEditDate] = useState(session?.date ?? "");
@@ -198,27 +201,44 @@ export default function SessionDetailScreen() {
             <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>Date & Time</Text>
             {isEditing ? (
               <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
-                <TextInput
+                <Pressable
+                  onPress={() => setShowCalendar(true)}
                   style={{
-                    flex: 1, fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
+                    flex: 1, flexDirection: "row", alignItems: "center", gap: 6,
                     borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
-                    paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.background,
+                    paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.background,
                   }}
-                  value={editDate}
-                  onChangeText={setEditDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textSecondary}
+                >
+                  <Ionicons name="calendar-outline" size={14} color={colors.accent} />
+                  <Text style={{ fontFamily: Fonts.regular, fontSize: 14, color: colors.text }}>
+                    {editDate}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setShowTimePicker(true)}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 6,
+                    borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
+                    paddingHorizontal: 10, paddingVertical: 10, backgroundColor: colors.background,
+                  }}
+                >
+                  <Ionicons name="time-outline" size={14} color={colors.accent} />
+                  <Text style={{ fontFamily: Fonts.regular, fontSize: 14, color: colors.text }}>
+                    {editTime}
+                  </Text>
+                </Pressable>
+                <CalendarPicker
+                  visible={showCalendar}
+                  onClose={() => setShowCalendar(false)}
+                  onSelectDate={setEditDate}
+                  selectedDate={editDate}
+                  title="Edit Date"
                 />
-                <TextInput
-                  style={{
-                    width: 80, fontFamily: Fonts.regular, fontSize: 14, color: colors.text,
-                    borderWidth: 1, borderColor: colors.inputBorder, borderRadius: 8,
-                    paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.background,
-                  }}
-                  value={editTime}
-                  onChangeText={setEditTime}
-                  placeholder="HH:MM"
-                  placeholderTextColor={colors.textSecondary}
+                <TimePicker
+                  visible={showTimePicker}
+                  onClose={() => setShowTimePicker(false)}
+                  onSelectTime={setEditTime}
+                  selectedTime={editTime}
                 />
               </View>
             ) : (

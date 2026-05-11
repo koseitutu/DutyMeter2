@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { View, Text, ScrollView, Pressable, Alert } from "react-native";
+import { View, Text, ScrollView, Pressable, Alert, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Fonts } from "@/constants/Typography";
@@ -21,12 +21,14 @@ export default function HistoryScreen() {
   const deleteSession = useAppStore((s) => s.deleteSession);
   const deleteSessions = useAppStore((s) => s.deleteSessions);
   const archiveSession = useAppStore((s) => s.archiveSession);
+  const bulkArchiveSessions = useAppStore((s) => s.bulkArchiveSessions);
   const restoreSession = useAppStore((s) => s.restoreSession);
   const deleteArchivedSession = useAppStore((s) => s.deleteArchivedSession);
   const [filter, setFilter] = useState<FilterType>("all");
   const [sort, setSort] = useState<SortType>("newest");
   const [showFilter, setShowFilter] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [showBulkArchive, setShowBulkArchive] = useState(false);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -147,6 +149,32 @@ export default function HistoryScreen() {
     setSelectedIds(new Set());
   };
 
+  const handleBulkArchive = useCallback(
+    (period: '3months' | '6months' | '1year') => {
+      const periodLabel = period === '3months' ? '3 months' : period === '6months' ? '6 months' : '1 year';
+      Alert.alert(
+        "Bulk Archive",
+        `Archive all sessions older than ${periodLabel}?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Archive",
+            onPress: () => {
+              const count = bulkArchiveSessions(period);
+              setShowBulkArchive(false);
+              if (count > 0) {
+                Alert.alert("Done", `${count} session${count > 1 ? "s" : ""} archived.`);
+              } else {
+                Alert.alert("No Sessions", `No sessions older than ${periodLabel} to archive.`);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [bulkArchiveSessions]
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
@@ -207,23 +235,36 @@ export default function HistoryScreen() {
             <Ionicons name="trash" size={18} color="#EF5350" />
           </Pressable>
         ) : (
-          <Pressable
-            onPress={() => router.push("/search")}
-            hitSlop={12}
-            style={{
-              position: "absolute",
-              right: 20,
-              bottom: 28,
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: "rgba(255,255,255,0.12)",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Ionicons name="search" size={18} color={colors.headerText} />
-          </Pressable>
+          <View style={{ position: "absolute", right: 20, bottom: 28, flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={() => setShowBulkArchive(true)}
+              hitSlop={8}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: "rgba(255,255,255,0.12)",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="archive" size={16} color={colors.headerText} />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/search")}
+              hitSlop={8}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: "rgba(255,255,255,0.12)",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="search" size={18} color={colors.headerText} />
+            </Pressable>
+          </View>
         )}
       </View>
 
@@ -628,6 +669,137 @@ export default function HistoryScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Bulk Archive Modal */}
+      <Modal
+        visible={showBulkArchive}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBulkArchive(false)}
+      >
+        <Pressable
+          onPress={() => setShowBulkArchive(false)}
+          style={{
+            flex: 1,
+            backgroundColor: colors.overlay,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 24,
+          }}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: 20,
+              borderCurve: "continuous",
+              width: "100%",
+              maxWidth: 340,
+              padding: 24,
+              boxShadow: `0 16px 48px ${colors.shadow}`,
+            }}
+          >
+            <View style={{ alignItems: "center", marginBottom: 20 }}>
+              <View
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  backgroundColor: colors.chipInactive,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+                <Ionicons name="archive" size={24} color={colors.accent} />
+              </View>
+              <Text
+                style={{
+                  fontFamily: Fonts.heading,
+                  fontSize: 18,
+                  color: colors.text,
+                  textAlign: "center",
+                }}
+              >
+                Bulk Archive
+              </Text>
+              <Text
+                style={{
+                  fontFamily: Fonts.regular,
+                  fontSize: 13,
+                  color: colors.textSecondary,
+                  textAlign: "center",
+                  marginTop: 6,
+                }}
+              >
+                Archive all sessions older than:
+              </Text>
+            </View>
+
+            <View style={{ gap: 10 }}>
+              {([
+                ["3months", "3 Months", "Archive sessions older than 3 months"],
+                ["6months", "6 Months", "Archive sessions older than 6 months"],
+                ["1year", "1 Year", "Archive sessions older than 1 year"],
+              ] as const).map(([period, label, desc]) => (
+                <Pressable
+                  key={period}
+                  onPress={() => handleBulkArchive(period)}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: 14,
+                    backgroundColor: pressed ? colors.chipInactive : colors.background,
+                    borderRadius: 12,
+                    borderCurve: "continuous",
+                    borderWidth: 1,
+                    borderColor: colors.inputBorder,
+                  })}
+                >
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: colors.chipInactive,
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Ionicons name="time-outline" size={18} color={colors.accent} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: Fonts.semiBold, fontSize: 15, color: colors.text }}>
+                      {label}
+                    </Text>
+                    <Text style={{ fontFamily: Fonts.regular, fontSize: 12, color: colors.textSecondary }}>
+                      {desc}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                </Pressable>
+              ))}
+            </View>
+
+            <Pressable
+              onPress={() => setShowBulkArchive(false)}
+              style={{
+                marginTop: 16,
+                paddingVertical: 14,
+                borderRadius: 12,
+                borderCurve: "continuous",
+                backgroundColor: colors.chipInactive,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontFamily: Fonts.medium, fontSize: 15, color: colors.text }}>
+                Cancel
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
