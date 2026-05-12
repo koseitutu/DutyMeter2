@@ -12,6 +12,7 @@
       "supportsTablet": false
     },
     "android": {
+      "package": "com.dutymeter.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/app_icon.png",
         "backgroundColor": "#2D3340"
@@ -37,6 +38,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id-here"
+      }
     }
   }
 }
